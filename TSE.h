@@ -11,6 +11,7 @@
 #include <Arduino.h>
 #include <Oleduino.h>
 #include <SPIdma.h>
+//#include "utility/TSE_printf.h"
 
 #define TSE_VIDEO_BUFFER_LENGTH 128  //128px = 1 line
 
