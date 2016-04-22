@@ -46,20 +46,20 @@ public:
 };
 
 
-/*
-class TSE_TileMap8
+
+class TSE_TileMap
 {
 public:
     TSE_TileMap(uint16_t _w, uint16_t _h, TSE_DataMat** _tMap);
     TSE_TileMap(){};
     
-    uint16_t collisionMask[TSE_MAP_WIDTH/(sizeof(uint16_t)*sizeof(byte))][TE_MAP_HEIGTH/(sizeof(uint16_t)*sizeof(byte))];
+    //uint16_t collisionMask[TSE_MAP_WIDTH/(sizeof(uint16_t)*sizeof(byte))][TE_MAP_HEIGTH/(sizeof(uint16_t)*sizeof(byte))];
     
     uint16_t width;
     uint16_t height;
     TSE_DataMat** tiledata;
 };
-*/
+
 
 
 class TSEngine
