@@ -14,6 +14,44 @@ void TSEngine::begin()
     dma.init();
 }
 
+void TSEngine::drawTileMap(TSE_TileMap *tilemap, uint8_t mode8or16, uint16_t bgCol, uint16_t *buffer, uint8_t lines)
+{
+    
+    //memset(lineBuffer,bgCol,128);
+    int tileGridY = (lines - tilemap->xOffset) / mode8or16;
+    int thisY = (lines - tilemap->yOffset) - (tileGridY * mode8or16);
+    int startX = tilemap->xOffset;
+    
+    int tileGridX = -tilemap->xOffset / mode8or16;
+    int startPos = (tileGridX * mode8or16) + tilemap->xOffset;
+    for (int x = startPos; x < 128; x += mode8or16)
+    {
+        int thisTileStartX = 0;
+        int thisTileLength = 2*mode8or16;  //2bytes*8or16pixels
+        if ( x < 0 )
+        {
+            thisTileStartX = -x;
+            thisTileLength -= thisTileStartX;
+        }
+        else if ( x > 128-mode8or16)
+        {
+            thisTileLength = 128 - x;
+        }
+        if (tileGridX >= 0 && tileGridY >= 0
+            && tileGridX < tilemap->width && tileGridY < tilemap->height &&
+            tilemap->tiledata[tileGridX + (tileGridY * tilemap->width)] != 0 )
+        {
+            memcpy(buffer + x + thisTileStartX, tilemap->tiledata[tileGridX + (tileGridY * tilemap->width)]->data + (thisTileStartX + (thisY * mode8or16)), thisTileLength);
+        }
+        else
+        {
+            memset(buffer + x + thisTileStartX, bgCol, thisTileLength);
+        }
+        tileGridX++;
+    }
+    
+}
+
 void TSEngine::drawSprite(TSE_Sprite *spr, uint16_t *buffer, int lines) //which Sprite, which line
 {
     if (spr->visible)

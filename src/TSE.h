@@ -34,7 +34,7 @@ public:
     bool hFlip = false;
     bool vFlip = false;
     
-    uint8_t size = 128;
+    uint8_t size = 128; //for futur use
 };
 
 class TSE_TextBox
@@ -46,20 +46,21 @@ public:
 };
 
 
-
 class TSE_TileMap
 {
 public:
-    TSE_TileMap(uint16_t _w, uint16_t _h, TSE_DataMat** _tMap);
-    TSE_TileMap(){};
+    TSE_TileMap(uint16_t _w, uint16_t _h,uint16_t _xoff, uint16_t _yoff, TSE_DataMat** _tMap)
+    :width(_w),height(_h),xOffset(_xoff),yOffset(_yoff),tiledata(_tMap){};
     
     //uint16_t collisionMask[TSE_MAP_WIDTH/(sizeof(uint16_t)*sizeof(byte))][TE_MAP_HEIGTH/(sizeof(uint16_t)*sizeof(byte))];
     
     uint16_t width;
     uint16_t height;
+    uint16_t xOffset=0;
+    uint16_t yOffset=0;
+    
     TSE_DataMat** tiledata;
 };
-
 
 
 class TSEngine
@@ -78,9 +79,10 @@ public:
     void drawSprite(TSE_Sprite *spr, uint16_t *buffer, int lines);
     void drawSpriteArray(TSE_Sprite *spr,uint16_t nbSprites, uint16_t *buffer, int lines);
     
+    void drawTileMap(TSE_TileMap *tilemap, uint8_t mode8or16, uint16_t bgCol, uint16_t *buffer, uint8_t lines);
+    
     //TODO
     //void drawTextBox();
-    
     
 };
 
