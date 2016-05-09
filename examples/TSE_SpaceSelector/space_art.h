@@ -1,0 +1,10 @@
+const uint16_t star1[9] =
+{
+  ALPHA , 0b1111100010000011 , ALPHA ,
+  0b1111100010000011 , WHITE , 0b1111100010000011 ,
+  ALPHA , 0b1111100010000011 , ALPHA ,
+};
+
+TSE_DataMat d_Star1 = {3, 3, star1};
+
+

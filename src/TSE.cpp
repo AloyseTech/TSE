@@ -84,7 +84,7 @@ void TSEngine::drawSpriteArray(TSE_Sprite *spr,uint16_t nbSprites, uint16_t *buf
 {
     for (int index = 0; index < nbSprites; index++)
     {
-        if (spr[index].visible)
+        if (spr[index].visible)// && ((spr[index].xPos+spr[index].data->width>0 && spr[index].xPos<128) || (spr[index].yPos+spr[index].data->height>0 && spr[index].yPos<128)))
         {
             const TSE_DataMat* datamat = spr[index].data;
             int curLine = lines - spr[index].yPos;
@@ -150,4 +150,6 @@ void TSEngine::endTransfer() {
     SPI.endTransaction();
     //digitalWrite(DISPLAY_CS_PIN, HIGH);
     PORT->Group[g_APinDescription[DISPLAY_CS_PIN].ulPort].OUTSET.reg = (1ul << g_APinDescription[DISPLAY_CS_PIN].ulPin) ;
+    
+    frameCounter++;
 }

@@ -13,16 +13,12 @@ void TSE_render(uint16_t bgCol)
 
 /**********************************************
  *                                            *
- *            put draw* funcions here         *
+ *        put tse.draw* funcions here         *
  *                                            *
  **********************************************/
+    tse.drawTileMap(&myMap, 16, 0, lineBuffer, lines);
+   
     tse.drawSprite(&tree, lineBuffer, lines);
-
-
-
-
-
-
 
     tse.transfer(lineBuffer);
   }

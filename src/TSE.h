@@ -11,7 +11,7 @@
 #include <Arduino.h>
 #include <Oleduino.h>
 #include <SPIdma.h>
-//#include "utility/TSE_printf.h"
+//#include "TSE_fastTrig.h"
 
 #define TSE_VIDEO_BUFFER_LENGTH 128  //128px = 1 line
 
@@ -69,6 +69,7 @@ public:
     DMA dma;
     uint8_t dma_buffer[2 * TSE_VIDEO_BUFFER_LENGTH]; //each pixel is 2 bytes long
     const uint16_t ALPHA = 0xF81F; //color considered as transparent
+    uint32_t frameCounter=0;
 
     
     void begin();
