@@ -5,6 +5,10 @@ class Planet
     uint8_t height, width;
 
     int16_t xPos, yPos;
+
+    const char* name;
+    uint8_t nameSize;
+    
     uint16_t colorA;
     uint16_t colorB;
     uint16_t colorC;
@@ -14,12 +18,14 @@ class Planet
 
 
     Planet() {}
-    Planet(int x, int y, int h, int w, const uint8_t * d, int cA, int cB, int cC, int cD)
+    Planet(int x, int y, int h, int w, String n, const uint8_t * d, int cA, int cB, int cC, int cD)
     {
       xPos = x;
       yPos = y;
       height = h;
       width = w;
+      name = n.c_str();
+      nameSize=n.length();
       datamat = d;
       colorA = cA;
       colorB = cB;

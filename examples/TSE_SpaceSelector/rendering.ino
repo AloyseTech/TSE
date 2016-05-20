@@ -22,16 +22,18 @@ void TSE_render(uint16_t bgCol)
     //tse.drawSpriteArray(stars, NB_STARS, lineBuffer, lines);
     for (int i = 0; i < NB_STARS; i++)
     {
-      if (stars[i].yPos+(yOffset>>1) == lines && stars[i].xPos+(xOffset>>1) < 128 && stars[i].xPos+(xOffset>>1) > 0)
+      if (stars[i].yPos + (yOffset >> 1) == lines && stars[i].xPos + (xOffset >> 1) < 128 && stars[i].xPos + (xOffset >> 1) > 0)
       {
-        lineBuffer[stars[i].xPos+(xOffset>>1)] = i % 4 ? WHITE : i % 3 ? RED : YELLOW;
+        lineBuffer[stars[i].xPos + (xOffset >> 1)] = i % 4 ? random(16) ? BLUE : WHITE : i % 3 ? RED : YELLOW;
       }
     }
 
     for (int i = 0; i < NB_PLANETS; i++)
-      p_array[i].draw(xOffset,yOffset,lineBuffer, lines);
+      p_array[i].draw(xOffset, yOffset, lineBuffer, lines);
 
     tse.drawSprite(&spaceShip, lineBuffer, lines);
+
+    TBplanetName.draw(lineBuffer, lines);
 
     tse.transfer(lineBuffer);
   }
