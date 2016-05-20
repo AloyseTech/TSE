@@ -13,6 +13,8 @@
 #include <SPIdma.h>
 //#include "TSE_fastTrig.h"
 
+#define ALPHA 0xF81F
+
 #define TSE_VIDEO_BUFFER_LENGTH 128  //128px = 1 line
 
 class TSE_DataMat
@@ -37,14 +39,6 @@ public:
     uint8_t size = 128; //for futur use
 };
 
-class TSE_TextBox
-{
-public:
-    int xPos=0,yPos=0;
-    char * s;
-    uint8_t length=0;
-};
-
 
 class TSE_TileMap
 {
@@ -56,21 +50,36 @@ public:
     
     uint16_t width;
     uint16_t height;
-    uint16_t xOffset=0;
-    uint16_t yOffset=0;
+    int16_t xOffset=0;
+    int16_t yOffset=0;
     
     TSE_DataMat** tiledata;
+    
 };
 
+class TSE_TextBox
+{
+public:
+    uint16_t color,bgcolor=ALPHA;
+    int xPos=0,yPos=0;
+    char * s;
+    uint8_t length=0;
+    int16_t time;
+    uint8_t size;
+    uint32_t firstTime = 0;
+    
+    void set(char * _s,uint8_t _length,int16_t _time,int _xPos,int _yPos,uint8_t _size,uint16_t _color,uint16_t _bgcolor);
+    void clear();
+    void draw(uint16_t *buffer, int lines);
+};
 
 class TSEngine
 {
 public:
     DMA dma;
     uint8_t dma_buffer[2 * TSE_VIDEO_BUFFER_LENGTH]; //each pixel is 2 bytes long
-    const uint16_t ALPHA = 0xF81F; //color considered as transparent
     uint32_t frameCounter=0;
-
+    
     
     void begin();
     void initTransfer();
@@ -78,6 +87,8 @@ public:
     void endTransfer();
     
     void drawSprite(TSE_Sprite *spr, uint16_t *buffer, int lines);
+    void drawSprite(TSE_Sprite *spr,TSE_TileMap *tm, uint16_t *buffer, int lines);
+    
     void drawSpriteArray(TSE_Sprite *spr,uint16_t nbSprites, uint16_t *buffer, int lines);
     
     void drawTileMap(TSE_TileMap *tilemap, uint8_t mode8or16, uint16_t bgCol, uint16_t *buffer, uint8_t lines);
