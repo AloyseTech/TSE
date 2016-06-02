@@ -13,9 +13,15 @@
 #include <SPIdma.h>
 //#include "TSE_fastTrig.h"
 
-#define ALPHA 0xF81F
+#define ALPHA (0xF81F)
 
-#define TSE_VIDEO_BUFFER_LENGTH 128  //128px = 1 line
+#define TSE_VIDEO_BUFFER_LENGTH (128)  //128px = 1 line
+
+#define COLL_UL (0)
+#define COLL_UR (1)
+#define COLL_DL (2)
+#define COLL_DR (3)
+
 
 class TSE_DataMat
 {
@@ -25,26 +31,12 @@ public:
     const uint16_t* data;
 };
 
-class TSE_Sprite
-{
-public:
-    const TSE_DataMat* data = 0;
-    int xPos = 0;
-    int yPos = 0;
-    bool visible = false;
-    uint8_t angle=0; //rotation : from 0 to trigo table size (64)
-    bool hFlip = false;
-    bool vFlip = false;
-    
-    uint8_t size = 128; //for futur use
-};
-
-
+class TSE_Sprite;
 class TSE_TileMap
 {
 public:
-    TSE_TileMap(uint16_t _w, uint16_t _h,uint16_t _xoff, uint16_t _yoff, TSE_DataMat** _tMap)
-    :width(_w),height(_h),xOffset(_xoff),yOffset(_yoff),tiledata(_tMap){};
+    TSE_TileMap(uint16_t _w, uint16_t _h,uint16_t _xoff, uint16_t _yoff, TSE_DataMat** _tMap,const uint8_t*_cm)
+    :width(_w),height(_h),xOffset(_xoff),yOffset(_yoff),tiledata(_tMap),collisionMask(_cm){};
     
     //uint16_t collisionMask[TSE_MAP_WIDTH/(sizeof(uint16_t)*sizeof(byte))][TE_MAP_HEIGTH/(sizeof(uint16_t)*sizeof(byte))];
     
@@ -54,8 +46,43 @@ public:
     int16_t yOffset=0;
     
     TSE_DataMat** tiledata;
+    const uint8_t* collisionMask;
     
+    uint8_t mode8or16=16; //TODO
+    
+    uint8_t tileCollision(TSE_Sprite *s,int xOff, int yOff);
+    uint8_t tileCollision(TSE_Sprite *s);
+    uint8_t tileCollision(TSE_Sprite *s, uint8_t type);
 };
+
+class TSE_Sprite
+{
+public:
+    const TSE_DataMat* data = 0;
+    int xPos = 0;
+    int yPos = 0;
+    int8_t scaledHeight=0,scaledWidth=0;
+    bool visible = false;
+    uint8_t angle=0; //rotation : from 0 to trigo table size (64)
+    bool hFlip = false;
+    bool vFlip = false;
+    
+    uint8_t size = 128; //for futur use
+    
+    void draw(uint16_t *buffer, int lines);
+    void draw(TSE_TileMap *map,uint16_t *buffer, int lines);
+    
+    void AI_moveTo(TSE_Sprite *spr,uint8_t xSpd, uint8_t ySpd,TSE_TileMap *map);
+    
+private:
+    int YD;
+    int YR;
+    int XD;
+    int XR;
+    int YE;
+    int inOffset=  0;
+};
+
 
 class TSE_TextBox
 {
@@ -93,9 +120,12 @@ public:
     
     void drawTileMap(TSE_TileMap *tilemap, uint8_t mode8or16, uint16_t bgCol, uint16_t *buffer, uint8_t lines);
     
+    float fps=0;
     //TODO
     //void drawTextBox();
     
+private:
+    uint32_t fpsTimer=0;
 };
 
 

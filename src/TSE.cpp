@@ -7,7 +7,7 @@
 //
 
 #include "TSE.h"
-
+#include "Arduino.h"
 
 void TSEngine::begin()
 {
@@ -68,63 +68,6 @@ void TSEngine::drawTileMap(TSE_TileMap *tilemap, uint8_t mode8or16, uint16_t bgC
         }
         tileGridX++;
     }
-    
-    
-    
-    
-    /*
-     //memset(lineBuffer,bgCol,128);
-     int tileGridY = (lines - tilemap->xOffset) / mode8or16;
-     int thisY = (lines - tilemap->yOffset) - (tileGridY * mode8or16);
-     int startX = tilemap->xOffset;
-     
-     int tileGridX = -tilemap->xOffset / mode8or16;
-     int startPos = (tileGridX * mode8or16) + tilemap->xOffset;
-     for (int x = startPos; x < 128; x += mode8or16)
-     {
-     int thisTileStartX = 0;
-     int thisTileLength = 2*mode8or16;  //2bytes*8or16pixels
-     if ( x < 0 )
-     {
-     thisTileStartX = -x;
-     thisTileLength -= thisTileStartX;
-     }
-     else if ( x > 128-mode8or16)
-     {
-     thisTileLength = 128 - x;
-     }
-     if (tileGridX >= 0 && tileGridY >= 0
-     && tileGridX < tilemap->width && tileGridY < tilemap->height &&
-     tilemap->tiledata[tileGridX + (tileGridY * tilemap->width)] != 0 )
-     {
-     //memcpy(buffer + x + thisTileStartX, tilemap->tiledata[tileGridX + (tileGridY * tilemap->width)]->data + (thisTileStartX + (thisY * mode8or16)), thisTileLength);
-     
-     if (x <= 128-mode8or16) {
-     memcpy(buffer + x + thisTileStartX, tilemap->tiledata[tileGridX + (tileGridY * tilemap->width)]->data + (thisTileStartX + (thisY * mode8or16)), thisTileLength);
-     }
-     else {
-     byte pixCounter = 0;
-     for (int i = x + thisTileStartX; i < x + thisTileStartX + mode8or16; i++)
-     {
-     if (i < 128)
-     buffer[i] = pgm_read_word_near(tilemap->tiledata[tileGridX + (tileGridY * tilemap->width)]->data + (thisTileStartX + (thisY * mode8or16)) + pixCounter);
-     pixCounter++;
-     }
-     }
-     }
-     else
-     {
-     //memset(buffer + x + thisTileStartX, bgCol, thisTileLength);
-     for (int i = x + thisTileStartX; i < x + thisTileStartX + mode8or16; i++)
-     {
-     if (i < 128)
-     buffer[i] = bgCol;
-     }
-     }
-     tileGridX++;
-     }
-     */
-    
 }
 
 void TSEngine::drawSprite(TSE_Sprite *spr, uint16_t *buffer, int lines) //which Sprite, which line
@@ -255,8 +198,12 @@ void TSEngine::endTransfer() {
     PORT->Group[g_APinDescription[DISPLAY_CS_PIN].ulPort].OUTSET.reg = (1ul << g_APinDescription[DISPLAY_CS_PIN].ulPin) ;
     
     frameCounter++;
+    if (frameCounter%10==0)
+    {
+        fps=10.0/((millis()-fpsTimer)/1000.0);
+        fpsTimer=millis();
+    }
 }
-
 
 
 
@@ -314,3 +261,353 @@ void TSE_TextBox::draw(uint16_t *buffer, int lines){
         }
     }
 }
+
+
+void TSE_Sprite::draw(uint16_t *buffer, int lines)
+{
+    if (visible)
+    {
+        if(scaledHeight==0||scaledWidth==0)
+        {
+            const TSE_DataMat* datamat = data;
+            int curLine = lines - yPos;
+            
+            if ( curLine >= 0 && curLine < datamat->height )
+            {
+                
+                for (int x = 0; x < datamat->width; ++x)
+                {
+                    int tx = x + xPos;
+                    if ( tx >= 0 && tx < 128 )
+                    {
+                        uint16_t col = vFlip ? datamat->data[(datamat->width - (x + 1)) + (curLine * datamat->width)] : datamat->data[x + (curLine * datamat->width)];
+                        
+                        if ( col != ALPHA )
+                        {
+                            buffer[tx] = col;
+                        }
+                    }
+                }
+            }
+        }
+        else //rescale necessary
+        {
+            //first, initialize scaling variables
+            if(lines==0)
+            {
+                YD = (data->height / scaledHeight) * data->width - data->width;
+                YR = data->height % scaledHeight;
+                XD = data->width / scaledWidth;
+                XR = data->width % scaledWidth;
+                YE=0;
+                inOffset=  0;
+            }
+            
+            
+            int curLine = lines - yPos;
+            
+            if ( curLine >= 0 && curLine < scaledHeight )
+            {
+                for (int x = 0, XE=0; x < scaledWidth; ++x)
+                {
+                    int tx = x + xPos;
+                    if ( tx >= 0 && tx < 128 )
+                    {
+                        uint16_t col = data->data[vFlip?inOffset-2*(inOffset%data->width)+data->width-1:inOffset];
+                        if ( col != ALPHA )
+                        {
+                            buffer[tx] = col;
+                        }
+                        
+                        inOffset+=XD;
+                        XE+=XR;
+                        if (XE >= scaledWidth)
+                        {
+                            XE-= scaledWidth;
+                            inOffset++;
+                        }
+                    }
+                }
+                inOffset+= YD;
+                YE+= YR;
+                if (YE >= scaledHeight)
+                {
+                    YE -= scaledHeight;
+                    inOffset+=data->width;
+                }
+            }
+            
+        } //end rescale
+    }
+}
+
+void TSE_Sprite::draw(TSE_TileMap *map,uint16_t *buffer, int lines)
+{
+    if (visible)
+    {
+        if(scaledHeight==0||scaledWidth==0)
+        {
+            const TSE_DataMat* datamat = data;
+            int curLine = lines - yPos - map->yOffset;
+            
+            if ( curLine >= 0 && curLine < datamat->height )
+            {
+                
+                for (int x = 0; x < datamat->width; ++x)
+                {
+                    int tx = x + xPos + map->xOffset;
+                    if ( tx >= 0 && tx < 128 )
+                    {
+                        uint16_t col = vFlip ? datamat->data[(datamat->width - (x + 1)) + (curLine * datamat->width)] : datamat->data[x + (curLine * datamat->width)];
+                        
+                        if ( col != ALPHA )
+                        {
+                            buffer[tx] = col;
+                        }
+                    }
+                }
+            }
+        }
+        else //rescale necessary
+        {
+            
+            int curLine = lines - yPos - map->yOffset;
+
+            
+            //first, initialize scaling variables
+            if(lines==0)
+            {
+                YD = (data->height / scaledHeight) * data->width - data->width;
+                YR = data->height % scaledHeight;
+                XD = data->width / scaledWidth;
+                XR = data->width % scaledWidth;
+                YE = 0;
+                inOffset = 0;//yPos<0?-yPos*data->width:0;
+                
+                //TODO : lot of optimization possible, probably
+                if(yPos<0)
+                    for(int k=0; k<-yPos;k++)
+                    {
+                        for (int x = 0, XE=0; x < scaledWidth; ++x)
+                        {
+                            inOffset+=XD;
+                            XE+=XR;
+                            if (XE >= scaledWidth)
+                            {
+                                XE-= scaledWidth;
+                                inOffset++;
+                            }
+                        }
+                        
+                        inOffset+= YD;
+                        YE+= YR;
+                        if (YE >= scaledHeight)
+                        {
+                            YE -= scaledHeight;
+                            inOffset+=data->width;
+                        }
+                    }
+                
+            }
+            
+            
+            if ( curLine >= 0 && curLine < scaledHeight )
+            {
+                for (int x = 0, XE=0; x < scaledWidth; ++x)
+                {
+                    int tx = x + xPos + map->xOffset;
+                    if ( tx >= 0 && tx < 128 )
+                    {
+                        uint16_t col = data->data[vFlip?inOffset-2*(inOffset%data->width)+data->width-1:inOffset];
+                        if ( col != ALPHA )
+                        {
+                            buffer[tx] = col;
+                        }
+                    }
+                    inOffset+=XD;
+                    XE+=XR;
+                    if (XE >= scaledWidth)
+                    {
+                        XE-= scaledWidth;
+                        inOffset++;
+                    }
+                }
+                
+                inOffset+= YD;
+                YE+= YR;
+                if (YE >= scaledHeight)
+                {
+                    YE -= scaledHeight;
+                    inOffset+=data->width;
+                }
+            }
+        } //end rescale
+    }
+}
+
+
+
+void TSE_Sprite::AI_moveTo(TSE_Sprite *spr,uint8_t xSpd,uint8_t ySpd, TSE_TileMap * map)
+{
+    bool leftIsPossible = !map->tileCollision(this,-xSpd,0) && !map->tileCollision(this,-xSpd,data->height-1);
+    bool rightIsPossible = !map->tileCollision(this,data->width+xSpd-1,0) && !map->tileCollision(this,data->width+xSpd-1,data->height-1);
+    bool upIsPossible = !map->tileCollision(this,0,-ySpd) && !map->tileCollision(this,data->width-1,-ySpd);
+    bool downIsPossible = !map->tileCollision(this,0,data->height+ySpd-1) && !map->tileCollision(this,data->width-1,data->height+ySpd-1);
+    
+    if(!digitalRead(SWITCH_A_PIN))
+    {
+        SerialUSB.print(leftIsPossible?"LEFT\n":"");
+        SerialUSB.print(rightIsPossible?"RIGHT\n":"");
+        SerialUSB.print(upIsPossible?"UP\n":"");
+        SerialUSB.print(downIsPossible?"DOWN\n":"");
+    }
+    
+   
+    int targetXpos = spr->xPos-map->xOffset;
+    int targetYpos = spr->yPos-map->yOffset;
+    
+    int deltaX;
+    int deltaY;
+    
+    int32_t score = map->width*map->width+map->height*map->height;
+    int32_t distance=score;
+    int8_t direction=-1;
+    
+    if(leftIsPossible)
+    {
+        deltaX=targetXpos-(xPos-xSpd);
+        deltaY=targetYpos-yPos;
+
+        distance=deltaX*deltaX+deltaY*deltaY;
+        if(score>distance)
+        {
+            direction=0; //left
+            score=distance;
+        }
+    }
+    if(rightIsPossible)
+    {
+        deltaX=targetXpos-(xPos+xSpd);
+        deltaY=targetYpos-yPos;
+        
+        distance=deltaX*deltaX+deltaY*deltaY;
+        if(score>distance)
+        {
+            direction=1; //right
+            score=distance;
+        }
+    }
+    if(upIsPossible)
+    {
+        deltaX=targetXpos-xPos;
+        deltaY=targetYpos-(yPos-ySpd);
+        
+        distance=deltaX*deltaX+deltaY*deltaY;
+        if(score>distance)
+        {
+            direction=2; //up
+            score=distance;
+        }
+    }
+    if(downIsPossible)
+    {
+        deltaX=targetXpos-xPos;
+        deltaY=targetYpos-(yPos+ySpd);
+        
+        distance=deltaX*deltaX+deltaY*deltaY;
+        if(score>distance)
+        {
+            direction=3; //down
+            score=distance;
+        }
+    }
+    
+    switch(direction)
+    {
+        case 0:
+            xPos-=xSpd;
+            break;
+        case 1:
+            xPos+=xSpd;
+            break;
+        case 2:
+            yPos-=ySpd;
+            break;
+        case 3:
+            yPos+=ySpd;
+            break;
+        default:
+            break;
+    }
+    
+    /*
+    for(int tol = max(abs(deltaX),abs(deltaY));tol>5;tol--)
+    {
+        if(xPos>targetXpos+tol && leftIsPossible)
+        {
+            //go left
+            xPos-=xSpd;
+            break;
+        }
+        if(xPos<targetXpos-tol && rightIsPossible)
+        {
+            //go right
+            xPos+=xSpd;
+            break;
+        }
+        if(yPos>targetYpos+tol && upIsPossible)
+        {
+            //go up
+            yPos-=ySpd;
+            break;
+        }
+        if(yPos<targetYpos-tol && downIsPossible)
+        {
+            //go down
+            yPos+=ySpd;
+            break;
+        }
+    }
+    
+    */
+}
+
+
+uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s)
+{
+    tileCollision(s,0,0);
+}
+
+uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s, uint8_t type)
+{
+    switch(type)
+    {
+        case COLL_UL:
+            tileCollision(s,0,0);
+            break;
+        case COLL_UR:
+            tileCollision(s,s->data->width,0);
+            break;
+        case COLL_DR:
+            tileCollision(s,s->data->width,s->data->height);
+            break;
+        case COLL_DL:
+            tileCollision(s,0,s->data->height);
+            break;
+        default:
+            return 0;
+            break;
+    }
+}
+
+
+uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s, int xOff, int yOff)
+{
+    return collisionMask[(s->xPos + xOff) / mode8or16 % height + (s->yPos + yOff) / mode8or16 * width];
+}
+
+
+
+
+
+
