@@ -17,6 +17,10 @@
 
 #define TSE_VIDEO_BUFFER_LENGTH (128)  //128px = 1 line
 
+#define TILE_MAP_WIDTH      (32)
+#define TILE_MAP_HEIGHT     (64)
+
+
 #define COLL_UL (0)
 #define COLL_UR (1)
 #define COLL_DL (2)
@@ -32,6 +36,7 @@ public:
 };
 
 class TSE_Sprite;
+
 class TSE_TileMap
 {
 public:
@@ -53,6 +58,8 @@ public:
     uint8_t tileCollision(TSE_Sprite *s,int xOff, int yOff);
     uint8_t tileCollision(TSE_Sprite *s);
     uint8_t tileCollision(TSE_Sprite *s, uint8_t type);
+    
+    bool inLineOfSight(int x0,int y0, int x1, int y1);
 };
 
 class TSE_Sprite
@@ -73,6 +80,12 @@ public:
     void draw(TSE_TileMap *map,uint16_t *buffer, int lines);
     
     void AI_moveTo(TSE_Sprite *spr,uint8_t xSpd, uint8_t ySpd,TSE_TileMap *map);
+    
+    uint8_t choosePath(TSE_Sprite *target, TSE_TileMap *onMap);
+    bool inLineOfSight(TSE_Sprite *target,  TSE_TileMap *onMap);
+    
+    uint8_t pathFinderMap[TILE_MAP_HEIGHT*TILE_MAP_WIDTH];
+
     
 private:
     int YD;
@@ -109,6 +122,7 @@ public:
     
     
     void begin();
+    void update();
     void initTransfer();
     void transfer(uint16_t buf[TSE_VIDEO_BUFFER_LENGTH]);
     void endTransfer();

@@ -6,6 +6,7 @@
 #include "characters.h"
 #include "tiles.h"
 #include "teva_sprites.h"
+#include "enemy.h"
 
 #define SHOW_FPS
 
@@ -24,7 +25,7 @@ TSE_Sprite hero;
 #define FEET_DOWN   hero.data->height-1
 
 TSE_Sprite blob_en;
-TSE_Sprite hero_bis;
+ShootingEnemy robot;
 TSE_Sprite bonus;
 TSE_Sprite projectile1;
 
@@ -188,10 +189,10 @@ void setup() {
   blob_en.yPos = 10;
   blob_en.visible = true;
 
-  hero_bis.data = &perso_animd[0];
-  hero_bis.xPos = 30;
-  hero_bis.yPos = 30;
-  hero_bis.visible = true;
+  robot.data = &perso_animd[0];
+  robot.xPos = 30;
+  robot.yPos = 30;
+  robot.visible = true;
 
   bonus.data = &s_batterie;
   bonus.xPos = 80;
@@ -292,7 +293,7 @@ void loop() {
   {
     lastBlobAnim = millis();
     blob_en.data = &blob_anim[bl_anim];
-    hero_bis.data = &perso_animd[bl_anim];
+    robot.data = &perso_animd[bl_anim];
 
     bl_anim++;
     if (bl_anim > 3)
@@ -314,8 +315,14 @@ void loop() {
 
   //move enemy (blob)
   blob_en.AI_moveTo(&hero, 1, 1, &myMap);
-
-
+  if (robot.inLineOfSight(&hero, &myMap))
+  {
+    robot.AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &myMap);
+    c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + myMap.yOffset, BLUE);
+    c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height / 2 + myMap.yOffset, WHITE);
+    c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height + myMap.yOffset, RED);
+  }
+  //SerialUSB.println(robot.choosePath(&hero, &myMap));
 
 
   //render the sprite with a background color (see transparency)
@@ -328,7 +335,6 @@ void loop() {
 }
 
 //TODO : move to specific file
-
 char *fps2char (double val, char *sout) {
   uint32_t iPart = (uint32_t)val;
   sprintf(sout, "%d", iPart);

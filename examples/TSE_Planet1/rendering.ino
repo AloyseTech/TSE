@@ -13,15 +13,15 @@ void TSE_render(uint16_t bgCol)
 
     /**********************************************
      *                                            *
-              put tse.draw* funcions here
+               put draw functions here
      *                                            *
      **********************************************/
     tse.drawTileMap(&myMap, 8, 0, lineBuffer, lines);
-    tse.drawSprite(&bonus, &myMap, lineBuffer, lines);
-    tse.drawSprite(&projectile1, &myMap, lineBuffer, lines);
-    tse.drawSprite(&blob_en, &myMap, lineBuffer, lines);
-    tse.drawSprite(&hero_bis, &myMap, lineBuffer, lines);
-    //tse.drawSprite(&hero, &myMap, lineBuffer, lines);
+    
+    bonus.draw(&myMap,lineBuffer, lines);
+    projectile1.draw(&myMap,lineBuffer, lines);
+    blob_en.draw(&myMap,lineBuffer, lines);
+    robot.draw(&myMap,lineBuffer, lines);
     hero.draw(&myMap, lineBuffer, lines);
     tb_fps.draw(lineBuffer, lines);
     

@@ -14,6 +14,11 @@ void TSEngine::begin()
     dma.init();
 }
 
+void TSEngine::update()
+{
+    
+}
+
 void TSEngine::drawTileMap(TSE_TileMap *tilemap, uint8_t mode8or16, uint16_t bgCol, uint16_t *buffer, uint8_t lines)
 {
     
@@ -453,24 +458,41 @@ void TSE_Sprite::AI_moveTo(TSE_Sprite *spr,uint8_t xSpd,uint8_t ySpd, TSE_TileMa
     bool rightIsPossible = !map->tileCollision(this,data->width+xSpd-1,0) && !map->tileCollision(this,data->width+xSpd-1,data->height-1);
     bool upIsPossible = !map->tileCollision(this,0,-ySpd) && !map->tileCollision(this,data->width-1,-ySpd);
     bool downIsPossible = !map->tileCollision(this,0,data->height+ySpd-1) && !map->tileCollision(this,data->width-1,data->height+ySpd-1);
-    
-    if(!digitalRead(SWITCH_A_PIN))
-    {
-        SerialUSB.print(leftIsPossible?"LEFT\n":"");
-        SerialUSB.print(rightIsPossible?"RIGHT\n":"");
-        SerialUSB.print(upIsPossible?"UP\n":"");
-        SerialUSB.print(downIsPossible?"DOWN\n":"");
-    }
-    
    
-    int targetXpos = spr->xPos-map->xOffset;
-    int targetYpos = spr->yPos-map->yOffset;
+    bool movedX=false;
     
-    int deltaX;
-    int deltaY;
+    int targetXpos = spr->xPos;//-map->xOffset;
+    int targetYpos = spr->yPos;//-map->yOffset;
     
-    int32_t score = map->width*map->width+map->height*map->height;
-    int32_t distance=score;
+    int deltaX=targetXpos-xPos;
+    int deltaY=targetYpos-yPos;
+    
+    int deltaXR=deltaX=targetXpos-(xPos+xSpd);
+    int deltaXL=deltaX=targetXpos-(xPos-xSpd);
+
+    int deltaYU=targetYpos-(yPos-ySpd);
+    int deltaYD=targetYpos-(yPos+ySpd);
+    
+    //go right?
+    if(abs(deltaXR)<abs(deltaXL) && rightIsPossible)
+    {
+        xPos+=xSpd;
+    }
+    else if(abs(deltaXR)>abs(deltaXL) && leftIsPossible)
+    {
+        xPos-=xSpd;
+    }
+    if(abs(deltaYU)<abs(deltaYD) && upIsPossible)
+    {
+        yPos-=ySpd;
+    }
+    else if(abs(deltaYU)>abs(deltaYD) && downIsPossible)
+    {
+        yPos+=ySpd;
+    }
+    /*
+    uint32_t score = 0xFFFFFFFF;
+    uint32_t distance=score;
     int8_t direction=-1;
     
     if(leftIsPossible)
@@ -539,38 +561,115 @@ void TSE_Sprite::AI_moveTo(TSE_Sprite *spr,uint8_t xSpd,uint8_t ySpd, TSE_TileMa
         default:
             break;
     }
+     */
+}
+
+
+
+
+bool TSE_Sprite::inLineOfSight(TSE_Sprite *target, TSE_TileMap *onMap)
+{
+    bool LOS=false;
     
+    int x0=(xPos+data->width/2);
+    int y0=(yPos+data->height/2);
+    
+    
+    //check center top
+    int x1=(target->xPos+target->data->width/2);
+    int y1=(target->yPos);
+    
+    LOS=onMap->inLineOfSight(x0,y0,x1,y1);
+    
+    //check center bottom
+    x1=(target->xPos+target->data->width/2);
+    y1=(target->yPos+target->data->height);
+    
+    LOS=LOS&&onMap->inLineOfSight(x0,y0,x1,y1);
+    
+    return LOS;
+}
+
+
+
+uint8_t TSE_Sprite::choosePath(TSE_Sprite *target, TSE_TileMap *onMap)
+{
     /*
-    for(int tol = max(abs(deltaX),abs(deltaY));tol>5;tol--)
+    //memcpy(pathFinderMap,onMap->collisionMask,TILE_MAP_HEIGHT*TILE_MAP_WIDTH);
+    for(int col=0; col<TILE_MAP_HEIGHT;col++)
     {
-        if(xPos>targetXpos+tol && leftIsPossible)
+        for(int row=0; row<TILE_MAP_WIDTH; row++)
         {
-            //go left
-            xPos-=xSpd;
-            break;
-        }
-        if(xPos<targetXpos-tol && rightIsPossible)
-        {
-            //go right
-            xPos+=xSpd;
-            break;
-        }
-        if(yPos>targetYpos+tol && upIsPossible)
-        {
-            //go up
-            yPos-=ySpd;
-            break;
-        }
-        if(yPos<targetYpos-tol && downIsPossible)
-        {
-            //go down
-            yPos+=ySpd;
-            break;
+            pathFinderMap[col*TILE_MAP_WIDTH+row]=onMap->collisionMask[col*TILE_MAP_WIDTH+row]?255:0;
         }
     }
     
-    */
+    //start from target
+    int targetXtile=(target->xPos - onMap->xOffset)/onMap->mode8or16;
+    int targetYtile=(target->yPos - onMap->yOffset)/onMap->mode8or16;
+    
+    int myXtile=xPos/onMap->mode8or16;
+    int myYtile=yPos/onMap->mode8or16;
+    
+    pathFinderMap[targetXtile*TILE_MAP_WIDTH+targetYtile]=1;
+    
+    uint8_t iterator;
+    
+    for(iterator = 1; iterator<255; iterator++)
+    {
+        for(int col=0; col<TILE_MAP_HEIGHT;col++)
+            for(int row=0; row<TILE_MAP_WIDTH;row++)
+            {
+                if(pathFinderMap[col*TILE_MAP_WIDTH+row]==iterator)
+                {
+                    if(!pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+min(row+1,TILE_MAP_WIDTH)])
+                        pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+min(row+1,TILE_MAP_WIDTH)]=iterator+1;
+                    
+                    if(!pathFinderMap[min(col,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+min(row+1,TILE_MAP_WIDTH)])
+                        pathFinderMap[min(col,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+min(row+1,TILE_MAP_WIDTH)]=iterator+1;
+                    
+                    if(!pathFinderMap[max(col-1,0)*TILE_MAP_WIDTH+min(row+1,TILE_MAP_WIDTH)])
+                        pathFinderMap[max(col-1,0)*TILE_MAP_WIDTH+min(row+1,TILE_MAP_WIDTH)]=iterator+1;
+                    
+                    if(!pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+row])
+                        pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+row]=iterator+1;
+                    
+                    if(!pathFinderMap[max(col-1,0)*TILE_MAP_WIDTH+row])
+                        pathFinderMap[max(col-1,0)*TILE_MAP_WIDTH+row]=iterator+1;
+                    
+                    if(!pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+max(row-1,0)])
+                        pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+max(row-1,0)]=iterator+1;
+                    
+                    if(!pathFinderMap[max(col-1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+max(row-1,0)])
+                        pathFinderMap[max(col-1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+max(row-1,0)]=iterator+1;
+                    
+                    if(!pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+max(row-1,0)])
+                        pathFinderMap[min(col+1,TILE_MAP_HEIGHT)*TILE_MAP_WIDTH+max(row-1,0)]=iterator+1;
+                }
+                
+                
+                //if this.tile is surounded by no empty tile, check bestdir
+                if(pathFinderMap[myYtile*TILE_MAP_WIDTH+myXtile]>0)  //it means we reached the source, algo is finished, need to choose dir now
+                {
+                    uint8_t bestDirection=255,checker=0;
+                    
+                    for(uint8_t k = 0; k<9;k++)
+                    {
+                        if(k!=4)//don't check my tile
+                        {
+                            checker=pathFinderMap[(myYtile-1+k/3)*TILE_MAP_WIDTH+(myXtile-1+k%3)];
+                            if(checker<bestDirection)
+                                bestDirection=checker;
+                        }
+                    }
+                    return bestDirection;
+                }
+            }
+    }
+    return 200;
+     */
 }
+
 
 
 uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s)
@@ -607,7 +706,77 @@ uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s, int xOff, int yOff)
 }
 
 
+bool TSE_TileMap::inLineOfSight(int x0,int y0,int x1,int y1)
+{
+    const uint8_t divisor = 2;
+    
+    x0/=mode8or16>>divisor;  // divide by 2 to split tile in 4 subtile
+    y0/=mode8or16>>divisor;
+    
+    x1/=mode8or16>>divisor;
+    y1/=mode8or16>>divisor;
+    
+    
+    
+    int16_t steep = abs(y1 - y0) > abs(x1 - x0);
+    
+    if (steep) {
+        swap(x0, y0);
+        swap(x1, y1);
+    }
+    
+    if (x0 > x1) {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+    
+    int16_t dx, dy;
+    dx = x1 - x0;
+    dy = abs(y1 - y0);
+    
+    int16_t err = dx / 2;
+    int16_t ystep;
+    
+    if (y0 < y1) {
+        ystep = 1;
+    } else {
+        ystep = -1;
+    }
+    
+    for (; x0 <= x1; x0++) {
+        if (steep) {
+            //drawPixel(y0, x0, color);
+            if (collisionMask[(y0>>divisor) + (x0>>divisor)* width])
+            {
+                /*
+                SerialUSB.print(y0);
+                SerialUSB.print(" ");
+                SerialUSB.println(x0);
+                */
+                return false;
+            }
+        } else {
+            //drawPixel(x0, y0, color);
+            if (collisionMask[(x0>>divisor) + (y0>>divisor)* width])
+            {
+                /*
+                SerialUSB.print(x0);
+                SerialUSB.print(" ");
+                SerialUSB.println(y0);
+                 */
+                return false;
+            }
+        }
+        err -= dy;
+        if (err < 0) {
+            y0 += ystep;
+            err += dx;
+        }
+    }
+    
+    return true;
 
+}
 
 
 
