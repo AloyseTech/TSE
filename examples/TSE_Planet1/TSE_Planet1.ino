@@ -7,13 +7,17 @@
 #include "tiles.h"
 #include "teva_sprites.h"
 #include "enemy.h"
+#include "planet1_map.h"
 
-#define SHOW_FPS
+//#define SHOW_FPS
+bool takeCapture = 0;
 
 #ifdef SHOW_FPS
 TSE_TextBox tb_fps;
 char fps_str[4] = {0};
 #endif
+
+uint8_t vore[9000]={0};
 
 TSEngine tse;
 Oleduino c;
@@ -24,146 +28,17 @@ TSE_Sprite hero;
 #define FEET_TOP    hero.data->height-5
 #define FEET_DOWN   hero.data->height-1
 
-TSE_Sprite blob_en;
+#define NUMBER_OF_BLOBS 24
+InfightingEnemy blob_en[NUMBER_OF_BLOBS];
+
+#define NUMBER_OF_ROBOTS 12
+ShootingEnemy robots_en[NUMBER_OF_ROBOTS];
+
 ShootingEnemy robot;
+
 TSE_Sprite bonus;
 TSE_Sprite projectile1;
 
-static TSE_TileMap myMap = {32, 64, 0, 0, new TSE_DataMat*[2048]
-  {
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_tree, &dm_tree, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_tree,
-    &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_tree, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_soil, &dm_tree, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_wallc, &dm_wallc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_wallc, &dm_soil, &dm_grass, &dm_tree, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_wallc, &dm_soil, &dm_floorc, &dm_floorc, &dm_floorc, &dm_soil, &dm_wallc, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_soil, &dm_grass, &dm_soil, &dm_wallc, &dm_soil, &dm_floorc, &dm_floorc, &dm_floorc, &dm_soil, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_soil, &dm_floorc, &dm_doorc, &dm_floorc, &dm_soil, &dm_wallc, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_wallc, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_wallc, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_tree, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_tree, &dm_tree, &dm_grass2, &dm_wallc, &dm_wallc, &dm_wallc, &dm_soil, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass2, &dm_grass2, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass2, &dm_soil, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_soil, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_soil, &dm_soil, &dm_doorc, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2,
-    &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_soil, &dm_grass2, &dm_tree, &dm_tree, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_soil, &dm_grass2, &dm_soil, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_grass2, &dm_grass2, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_soil, &dm_grass, &dm_grass, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_tree,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass,
-    &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass2, &dm_tree, &dm_grass2, &dm_grass2,
-    &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2,
-    &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_soil, &dm_grass2, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2,
-    &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_soil, &dm_grass, &dm_tree, &dm_grass, &dm_soil, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_tree,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_tree, &dm_soil, &dm_soil, &dm_soil, &dm_tree, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree,
-    &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_soil, &dm_soil, &dm_soil, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree,
-    &dm_grass, &dm_grass2, &dm_tree, &dm_grass, &dm_grass2, &dm_wallc, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_soil, &dm_soil, &dm_soil, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass, &dm_grass, &dm_wallc, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_wallc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_soil, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_doorc, &dm_wallc, &dm_wallc, &dm_tree, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_wallc, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass, &dm_tree, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_wallc, &dm_grass,
-    &dm_tree, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_wallc, &dm_grass, &dm_floorc, &dm_floorc, &dm_floorc, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_floorc, &dm_floorc, &dm_floorc, &dm_grass, &dm_grass2, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_floorc, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_wallc, &dm_grass, &dm_floorc, &dm_doorc, &dm_floorc, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_floorc, &dm_doorc, &dm_floorc, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass2, &dm_floorc, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass, &dm_wallc, &dm_grass, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_soil, &dm_grass2, &dm_tree, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_tree, &dm_grass, &dm_tree, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_doorc, &dm_grass,
-    &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_grass, &dm_wallc, &dm_grass, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass2, &dm_soil, &dm_tree, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_wallc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass, &dm_tree, &dm_soil, &dm_grass, &dm_grass, &dm_grass2,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_tree, &dm_wallc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_tree,
-    &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_wallc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass2, &dm_tree, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_wallc, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_doorc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass,
-    &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_wallc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_tree, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_wallc, &dm_floorc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_tree, &dm_grass, &dm_wallc, &dm_doorc, &dm_wallc, &dm_wallc, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_grass2, &dm_wallc, &dm_grass, &dm_grass2, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_grass2, &dm_doorc, &dm_grass, &dm_tree, &dm_grass2, &dm_tree, &dm_grass2, &dm_tree, &dm_wallc, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_tree, &dm_grass2, &dm_grass2, &dm_soil, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_tree, &dm_wallc, &dm_grass2, &dm_soil, &dm_grass, &dm_grass, &dm_tree, &dm_grass,
-    &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_tree, &dm_grass, &dm_floorc, &dm_floorc, &dm_floorc, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_floorc, &dm_doorc, &dm_floorc, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_wallc, &dm_floorc, &dm_floorc, &dm_wallc, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_soil, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2,
-    &dm_grass2, &dm_grass2, &dm_tree, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_wallc, &dm_doorc, &dm_wallc, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_soil, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass2, &dm_wallc, &dm_grass, &dm_grass, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass2, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_wallc, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass, &dm_tree, &dm_grass, &dm_wallc, &dm_tree, &dm_grass, &dm_grass2, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_wallc, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_tree, &dm_soil, &dm_soil, &dm_soil, &dm_tree, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_tree, &dm_soil, &dm_soil, &dm_soil, &dm_tree, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_wallc, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_tree, &dm_tree, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_grass2, &dm_grass2, &dm_tree,
-    &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_soil, &dm_grass, &dm_grass, &dm_tree, &dm_soil, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree,
-    &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_soil, &dm_grass, &dm_grass2, &dm_soil, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_soil, &dm_soil, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_grass,
-    &dm_grass, &dm_grass, &dm_tree, &dm_wallc, &dm_grass2, &dm_soil, &dm_soil, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_soil, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_tree, &dm_doorc, &dm_grass, &dm_soil, &dm_soil, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_soil, &dm_grass2, &dm_grass, &dm_soil, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_grass2, &dm_grass, &dm_tree, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass2,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass2, &dm_grass2, &dm_grass, &dm_tree, &dm_tree, &dm_grass, &dm_grass, &dm_grass2,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_tree, &dm_grass, &dm_grass, &dm_grass,
-    &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass2, &dm_grass2, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass, &dm_grass
-  },
-  new const uint8_t[32 * 64]
-  {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0,
-    0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0,
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0,
-    0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
-    0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1,
-    0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1,
-    0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-    0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
-    0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0,
-    0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-    0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0,
-    1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0,
-    0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
-    0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-    0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
-    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-    0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  }
-};
 
 void setup() {
   // put your setup code here, to run once:
@@ -173,6 +48,7 @@ void setup() {
   // initialize the game engine
   tse.begin();
   digitalWrite(13, LOW);
+
 
   // initialize the sprite
   hero.data = &dm_chside1; //the pixel data matrix
@@ -184,15 +60,36 @@ void setup() {
   hero.hFlip = false;   //no horizontal flip
   hero.size = 128;      //normal size ration
 
-  blob_en.data = &blob_anim[0];
-  blob_en.xPos = 10;
-  blob_en.yPos = 10;
-  blob_en.visible = true;
+  randomSeed(1);
+  for (int b = 0; b < NUMBER_OF_BLOBS; b++)
+  {
+    blob_en[b].data = &blob_anim[b % 4];
+    blob_en[b].setCollisionOffsets(9, 1, 2, 2);
+    do
+    {
+      blob_en[b].xPos = random(31 * 16);
+      blob_en[b].yPos = random(63 * 16);
+    } while (myMap.tileCollisionBoundary(&blob_en[b]));
+    blob_en[b].visible = true;
+  }
 
-  robot.data = &perso_animd[0];
-  robot.xPos = 30;
-  robot.yPos = 30;
-  robot.visible = true;
+  for (int b = 0; b < NUMBER_OF_ROBOTS; b++)
+  {
+    robots_en[b].data = &perso_animd[b % 4];
+    robots_en[b].setCollisionOffsets(1, 1, 2, 2);
+    do
+    {
+      robots_en[b].xPos = random(31 * 16);
+      robots_en[b].yPos = random(63 * 16);
+    } while (myMap.tileCollisionBoundary(&robots_en[b]));
+    robots_en[b].visible = true;
+  }
+  /*
+    robot.data = &perso_animd[0];
+    robot.xPos = 30;
+    robot.yPos = 30;
+    robot.visible = true;
+  */
 
   bonus.data = &s_batterie;
   bonus.xPos = 80;
@@ -211,7 +108,9 @@ void setup() {
 
 
 
-byte ch_anim = 0, ch_dir = 0, bl_anim = 0;
+byte ch_anim = 0, ch_dir = 0, bl_anim = 0, rob_dir = 0, rob_anim = 0;
+int lastRobX;
+int lastRobY;
 uint32_t lastChAnim = 0, lastBlobAnim = 0;
 
 void loop() {
@@ -289,16 +188,6 @@ void loop() {
     }
     ch_dir = 0;
   }
-  if (millis() - lastBlobAnim > 100)
-  {
-    lastBlobAnim = millis();
-    blob_en.data = &blob_anim[bl_anim];
-    robot.data = &perso_animd[bl_anim];
-
-    bl_anim++;
-    if (bl_anim > 3)
-      bl_anim = 0;
-  }
 
 #define CH_WINDOW_WIDTH 32
 #define CH_WINDOW_HEIGHT 32
@@ -314,14 +203,70 @@ void loop() {
 
 
   //move enemy (blob)
-  blob_en.AI_moveTo(&hero, 1, 1, &myMap);
-  if (robot.inLineOfSight(&hero, &myMap))
+  for (int b = 0; b < NUMBER_OF_BLOBS; b++)
   {
-    robot.AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &myMap);
-    c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + myMap.yOffset, BLUE);
-    c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height / 2 + myMap.yOffset, WHITE);
-    c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height + myMap.yOffset, RED);
+    if (blob_en[b].squareDistanceTo(&hero) < 10000)
+      blob_en[b].move(&myMap, &hero, tse.frameCounter);
   }
+  if (millis() - lastBlobAnim > 100)
+  {
+    lastBlobAnim = millis();
+    for (int b = 0; b < NUMBER_OF_BLOBS; b++)
+    {
+      blob_en[b].data = &blob_anim[(bl_anim + b) % 4];
+    }
+
+    bl_anim++;
+    if (bl_anim > 3)
+      bl_anim = 0;
+  }
+
+  for (int r = 0; r < NUMBER_OF_ROBOTS; r++)
+  {
+
+    if (robots_en[r].squareDistanceTo(&hero) < 10000 && robots_en[r].squareDistanceTo(&hero) > 100)
+    {
+      robots_en[r].lastX = robots_en[r].xPos;
+      robots_en[r].lastY = robots_en[r].yPos;
+
+      robots_en[r].AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &myMap);
+    }
+    if (robots_en[r].lastX != robots_en[r].xPos || robots_en[r].lastY != robots_en[r].yPos)
+      robots_en[r].data = &perso_animd[(bl_anim + r) % 4];
+    else
+      robots_en[r].data = &perso_animd[0]; //steady
+
+    if (robots_en[r].inLineOfSight(&hero, &myMap))
+    {
+      robots_en[r].shoot(&hero);
+    }
+    robots_en[r].updateBullets(&myMap);
+  }
+  /*
+    if (robot.squareDistanceTo(&hero) < 10000 && robot.squareDistanceTo(&hero) > 100)
+    {
+      lastRobX = robot.xPos;
+      lastRobY = robot.yPos;
+
+      robot.AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &myMap);
+    }
+    if (lastRobX != robot.xPos || lastRobY != robot.yPos)
+      robot.data = &perso_animd[bl_anim];
+    else
+      robot.data = &perso_animd[0]; //steady
+
+
+    if (robot.inLineOfSight(&hero, &myMap))
+    {
+      robot.shoot(&hero);
+      //c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + myMap.yOffset, BLUE);
+      //c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height / 2 + myMap.yOffset, WHITE);
+      //c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height + myMap.yOffset, RED);
+    }
+    robot.updateBullets(&myMap);
+
+    digitalWrite(13, robot.touched(&hero));
+  */
   //SerialUSB.println(robot.choosePath(&hero, &myMap));
 
 
@@ -331,6 +276,7 @@ void loop() {
 #ifdef SHOW_FPS
   fps2char(tse.fps, fps_str);
   tb_fps.set(fps_str, 4, 100, 0, 0, 1, WHITE, ALPHA);
+  vore[random(1000)]++;
 #endif
 }
 
@@ -348,4 +294,16 @@ char *fps2char (double val, char *sout) {
 }
 
 
+
+
+extern "C" char* sbrk(int incr);
+int freeMemory() {
+  char top;
+  return &top - reinterpret_cast<char*>(sbrk(0));
+}
+
+void printRam()
+{
+  if (c.C.isPressed())SerialUSB.println("Free RAM : " + String(freeMemory()) + "bytes");
+}
 

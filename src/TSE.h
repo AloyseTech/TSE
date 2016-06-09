@@ -11,7 +11,10 @@
 #include <Arduino.h>
 #include <Oleduino.h>
 #include <SPIdma.h>
-//#include "TSE_fastTrig.h"
+#include "TSE_FastTrig.h"
+
+
+#define SCREEN_CAPTURE
 
 #define ALPHA (0xF81F)
 
@@ -34,6 +37,7 @@ public:
     int height;
     const uint16_t* data;
 };
+
 
 class TSE_Sprite;
 
@@ -58,6 +62,9 @@ public:
     uint8_t tileCollision(TSE_Sprite *s,int xOff, int yOff);
     uint8_t tileCollision(TSE_Sprite *s);
     uint8_t tileCollision(TSE_Sprite *s, uint8_t type);
+    uint8_t tileCollisionBoundary(TSE_Sprite *s);
+    uint8_t tileCollisionBoundary(TSE_Sprite *s,int xOff, int yOff);
+
     
     bool inLineOfSight(int x0,int y0, int x1, int y1);
 };
@@ -84,8 +91,21 @@ public:
     uint8_t choosePath(TSE_Sprite *target, TSE_TileMap *onMap);
     bool inLineOfSight(TSE_Sprite *target,  TSE_TileMap *onMap);
     
-    uint8_t pathFinderMap[TILE_MAP_HEIGHT*TILE_MAP_WIDTH];
+    uint32_t squareDistanceTo(TSE_Sprite *target);
+    
+    bool collision(TSE_Sprite sprinst2);
+    bool collision(TSE_Sprite sprinst2, int dx, int dy);
+    bool collisionPerfect(TSE_Sprite s2);
+    
+    
+    //need to be static, RAMvore otherwise
+    //uint8_t pathFinderMap[TILE_MAP_HEIGHT*TILE_MAP_WIDTH];
 
+    void setCollisionOffsets(int t, int b, int r, int l);
+    uint8_t colTopOffset=0;
+    uint8_t colBottomOffset=0;
+    uint8_t colRightOffset=0;
+    uint8_t colLeftOffset=0;
     
 private:
     int YD;
@@ -127,6 +147,28 @@ public:
     void transfer(uint16_t buf[TSE_VIDEO_BUFFER_LENGTH]);
     void endTransfer();
     
+#ifdef SCREEN_CAPTURE
+    //for 128x128 16bit picture
+    const char bmp_header[54] =
+    {
+        0x42, 0x4D, 0x36, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00,
+        0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x01, 0x00, 0x10, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0xC4, 0x0E, 0x00, 0x00, 0xC4, 0x0E, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    
+    const int w = 128;                   // image width in pixels
+    const int h = 128;                    // " height
+    
+    uint32_t captureCounter=0;
+    File picture;
+    String capturePath="CAPTURE";
+    uint8_t img[256];
+    void initCapture();
+    void processCapture(uint16_t *lineBuffer);
+    void endCapture();
+#endif
+    
     void drawSprite(TSE_Sprite *spr, uint16_t *buffer, int lines);
     void drawSprite(TSE_Sprite *spr,TSE_TileMap *tm, uint16_t *buffer, int lines);
     
@@ -137,6 +179,10 @@ public:
     float fps=0;
     //TODO
     //void drawTextBox();
+    
+    
+    float fastSin(uint8_t angle);
+    float fastCos(uint8_t angle);
     
 private:
     uint32_t fpsTimer=0;
