@@ -1,3 +1,4 @@
+//#include <SD.h>
 #include <Oleduino.h>
 #include <TSE.h>
 #include "planet.h"
@@ -13,12 +14,12 @@ Oleduino c;
 Planet p1(64, 0, 46, 47, "X-84 GEMS", planetType1, RED, GREEN, BLUE, 0);
 Planet p2(0, 0, 46, 47, "URANUS", planetType1, 0xFDF6, 0xFBAC, 0xE00C, 0);
 
-#define NB_PLANETS 128
+#define NB_PLANETS 64
 #define PLANET_SPACE_SIZE 1024
 Planet p_array[NB_PLANETS];
 TSE_TextBox TBplanetName;
 
-#define NB_STARS 512
+#define NB_STARS 380
 #define STARS_SPACE_SIZE (PLANET_SPACE_SIZE)/2
 TSE_Sprite stars[NB_STARS];
 
@@ -36,7 +37,7 @@ void setup() {
   // initialize the game engine
   tse.begin();
 
-  SD.begin(SD_CS_PIN);
+  //SD.begin(SD_CS_PIN);
 
   randomSeed(analogRead(A4)); //micros()*int(__DATE__) + int(__TIME__)
 
@@ -83,8 +84,8 @@ byte shipAcc = 0;
 
 long xOffset = 0, yOffset = 0;
 
-int8_t xAcceleration = 0, xVelocity = 0;
-int8_t yAcceleration = 0, yVelocity = 0;
+int xAcceleration = 0, xVelocity = 0;
+int yAcceleration = 0, yVelocity = 0;
 
 void loop() {
 
@@ -97,7 +98,7 @@ void loop() {
       //digitalWrite(13, HIGH);
       TBplanetName.set((char*)p_array[k].name, p_array[k].nameSize, 100, p_array[k].xPos + xOffset, p_array[k].yPos + yOffset, 1, RED,0);
       if (c.A.isPressed())
-        c.loadApp("Pacman/Pacman.bin");
+        c.loadApp("SpaceRPG/prologue.bin");
       break;
     }
   }
@@ -119,10 +120,11 @@ void loop() {
     SerialUSB.println(yAcceleration);
     SerialUSB.println();
 
-    if (abs(xVelocity) > 1)
-      xVelocity -= xVelocity / abs(xVelocity);
-    if (abs(yVelocity) > 1)
-      yVelocity -= yVelocity / abs(yVelocity);
+
+    if (fabs(xVelocity) > 1)
+      xVelocity -= xVelocity / fabs(xVelocity);
+    if (fabs(yVelocity) > 1)
+      yVelocity -= yVelocity / fabs(yVelocity);
 
     xVelocity = constrain(xVelocity + xAcceleration, -MAX_SHIP_SPEED, MAX_SHIP_SPEED);
     yVelocity = constrain(yVelocity + yAcceleration, -MAX_SHIP_SPEED, MAX_SHIP_SPEED);

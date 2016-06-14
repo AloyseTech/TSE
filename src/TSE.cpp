@@ -12,7 +12,6 @@
 void TSEngine::begin()
 {
 #ifdef SCREEN_CAPTURE
-    SD.remove("/CAPTURE");
     SD.mkdir("/CAPTURE");
 #endif
     
@@ -170,14 +169,17 @@ void TSEngine::drawSpriteArray(TSE_Sprite *spr,uint16_t nbSprites, uint16_t *buf
 #ifdef SCREEN_CAPTURE
 void TSEngine::initCapture()
 {    
-    String fullName = String(capturePath);
-    fullName += "/";
-    fullName += String(captureCounter);
-    fullName += ".bmp";
+    char fullName[48]={0};
+    //fullName += "/";
+    //fullName += String(captureCounter);
+    snprintf(fullName,48,"%s/%l.bmp",capturePath,captureCounter);
+    //fullName += ".bmp";
     if (captureCounter > 99999999)
         captureCounter = 0;
     uint16_t sdcolor;
     
+    if(SD.exists(fullName))
+        SD.remove(fullName);
     picture = SD.open(fullName, FILE_WRITE);
     
     byte VH, VL;

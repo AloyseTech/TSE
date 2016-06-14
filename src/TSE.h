@@ -44,7 +44,7 @@ class TSE_Sprite;
 class TSE_TileMap
 {
 public:
-    TSE_TileMap(uint16_t _w, uint16_t _h,uint16_t _xoff, uint16_t _yoff, TSE_DataMat** _tMap,const uint8_t*_cm)
+    TSE_TileMap(uint16_t _w, uint16_t _h,uint16_t _xoff, uint16_t _yoff, const TSE_DataMat** _tMap,const uint8_t*_cm)
     :width(_w),height(_h),xOffset(_xoff),yOffset(_yoff),tiledata(_tMap),collisionMask(_cm){};
     
     //uint16_t collisionMask[TSE_MAP_WIDTH/(sizeof(uint16_t)*sizeof(byte))][TE_MAP_HEIGTH/(sizeof(uint16_t)*sizeof(byte))];
@@ -54,7 +54,7 @@ public:
     int16_t xOffset=0;
     int16_t yOffset=0;
     
-    TSE_DataMat** tiledata;
+    const TSE_DataMat** tiledata;
     const uint8_t* collisionMask;
     
     uint8_t mode8or16=16; //TODO
@@ -162,7 +162,7 @@ public:
     
     uint32_t captureCounter=0;
     File picture;
-    String capturePath="CAPTURE";
+    char* capturePath="CAPTURE";
     uint8_t img[256];
     void initCapture();
     void processCapture(uint16_t *lineBuffer);
