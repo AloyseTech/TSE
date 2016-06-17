@@ -172,7 +172,8 @@ void TSEngine::initCapture()
     char fullName[48]={0};
     //fullName += "/";
     //fullName += String(captureCounter);
-    snprintf(fullName,48,"%s/%l.bmp",capturePath,captureCounter);
+    snprintf(fullName,48,"%s/%lu.bmp",capturePath,captureCounter);
+    SerialUSB.println(fullName);
     //fullName += ".bmp";
     if (captureCounter > 99999999)
         captureCounter = 0;
@@ -832,10 +833,10 @@ uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s, int xOff, int yOff)
 
 uint8_t TSE_TileMap::tileCollisionBoundary(TSE_Sprite *s)
 {
-    if(collisionMask[(s->xPos - s->colLeftOffset) / mode8or16 % height + (s->yPos + s->colTopOffset) / mode8or16 * width]         //TOP LEFT CORNER
-       ||collisionMask[(s->xPos - s->colLeftOffset) / mode8or16 % height + (s->yPos - s->colBottomOffset) / mode8or16 * width]    //BOTTOM LEFT
-       ||collisionMask[(s->xPos + s->colRightOffset) / mode8or16 % height + (s->yPos + s->colTopOffset) / mode8or16 * width]      //TOP RIGHT
-       ||collisionMask[(s->xPos + s->colRightOffset) / mode8or16 % height + (s->yPos - s->colBottomOffset) / mode8or16 * width])  //BOTTOM RIGHT
+    if(collisionMask[(s->xPos + s->colLeftOffset) / mode8or16 % height + (s->yPos + s->colTopOffset) / mode8or16 * width]        //TOP LEFT CORNER
+       ||collisionMask[(s->xPos + s->colLeftOffset) / mode8or16 % height + (s->yPos +s->data->height - s->colBottomOffset) / mode8or16 * width]   //BOTTOM LEFT
+       ||collisionMask[(s->xPos + s->data->width - s->colRightOffset) / mode8or16 % height + (s->yPos + s->colTopOffset) / mode8or16 * width]     //TOP RIGHT
+       ||collisionMask[(s->xPos + s->data->width- s->colRightOffset) / mode8or16 % height + (s->yPos + s->data->height - s->colBottomOffset) / mode8or16 * width]) //BOTTOM RIGHT
         return 1;
     return 0;
 }

@@ -12,7 +12,8 @@
 #include <Oleduino.h>
 #include <SPIdma.h>
 #include "TSE_FastTrig.h"
-
+#include <SdFat.h>
+extern SdFat SD;
 
 #define SCREEN_CAPTURE
 
@@ -139,7 +140,6 @@ public:
     DMA dma;
     uint8_t dma_buffer[2 * TSE_VIDEO_BUFFER_LENGTH]; //each pixel is 2 bytes long
     uint32_t frameCounter=0;
-    
     
     void begin();
     void update();

@@ -4,6 +4,7 @@ void TSE_render(uint16_t bgCol)
 
   if (takeCapture)
     tse.initCapture();
+
   tse.initTransfer();
   for (uint8_t lines = 0; lines < 128; lines++)
   {
@@ -36,7 +37,7 @@ void TSE_render(uint16_t bgCol)
     robots_plan = NUMBER_OF_ROBOTS;
     for (int r = 0; r < NUMBER_OF_ROBOTS; r++)
     {
-      if (robots_en[r].yPos >= hero.yPos)
+      if (robots_en[r].yPos + robots_en[r].data->height >= hero.yPos + hero.data->height)
       {
         robots_plan = r;
         break;
@@ -48,6 +49,11 @@ void TSE_render(uint16_t bgCol)
       }
     }
 
+
+    if (npc1.yPos + npc1.data->height < hero.yPos + hero.data->height)
+      npc1.draw(&SELECTED_MAP, lineBuffer, lines);
+
+
     if (ch_dir == 4)
     {
       heroSword.draw(&SELECTED_MAP, lineBuffer, lines);
@@ -58,6 +64,13 @@ void TSE_render(uint16_t bgCol)
       hero.draw(&SELECTED_MAP, lineBuffer, lines);
       heroSword.draw(&SELECTED_MAP, lineBuffer, lines);
     }
+
+
+    if (npc1.yPos + npc1.data->height >= hero.yPos + hero.data->height)
+      npc1.draw(&SELECTED_MAP, lineBuffer, lines);
+
+    helpbox.draw(&SELECTED_MAP, lineBuffer, lines);
+
 
 
     for (int b = blobs_plan; b < NUMBER_OF_BLOBS; b++)
@@ -75,8 +88,6 @@ void TSE_render(uint16_t bgCol)
     }
 
 
-
-    //hero.drawHP(&SELECTED_MAP, lineBuffer, lines);
 
 #ifdef SHOW_FPS
     tb_fps.draw(lineBuffer, lines);

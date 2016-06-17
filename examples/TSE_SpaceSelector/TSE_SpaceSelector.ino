@@ -1,11 +1,12 @@
-//#include <SD.h>
+#include <SdFat.h>
+SdFat SD;
+
 #include <Oleduino.h>
 #include <TSE.h>
 #include "planet.h"
 #include "planets_art.h"
 #include "spaceship_art.h"
 #include "space_art.h"
-#include "fastTrigo.h"
 
 
 TSEngine tse;
@@ -37,8 +38,6 @@ void setup() {
   // initialize the game engine
   tse.begin();
 
-  //SD.begin(SD_CS_PIN);
-
   randomSeed(analogRead(A4)); //micros()*int(__DATE__) + int(__TIME__)
 
   for (int i = 0; i < NB_PLANETS; i++)
@@ -51,9 +50,9 @@ void setup() {
 
 
     p_array[i].name = "TE.8-X";
-    p_array[i].nameSize =6;
+    p_array[i].nameSize = 6;
 
-      p_array[i].datamat = i % 2 ? planetType1 : planetType2;
+    p_array[i].datamat = i % 2 ? planetType1 : planetType2;
 
     p_array[i].colorA = random(0xFFFF);
     p_array[i].colorB = random(0xFFFF);
@@ -96,7 +95,7 @@ void loop() {
     if (planetCollision(spaceShip, p_array[k]))
     {
       //digitalWrite(13, HIGH);
-      TBplanetName.set((char*)p_array[k].name, p_array[k].nameSize, 100, p_array[k].xPos + xOffset, p_array[k].yPos + yOffset, 1, RED,0);
+      TBplanetName.set((char*)p_array[k].name, p_array[k].nameSize, 100, p_array[k].xPos + xOffset, p_array[k].yPos + yOffset, 1, RED, 0);
       if (c.A.isPressed())
         c.loadApp("SpaceRPG/prologue.bin");
       break;
@@ -155,13 +154,11 @@ void slideSpace(int x, int y)
   xOffset += xadd;
   yOffset += yadd;
 
-SerialUSB.println(xOffset);
 
-
-  if (xOffset > PLANET_SPACE_SIZE + 128+64)
+  if (xOffset > PLANET_SPACE_SIZE + 128 + 64)
     xOffset = -PLANET_SPACE_SIZE - 128;
   else if (xOffset < -PLANET_SPACE_SIZE - 128)
-    xOffset = PLANET_SPACE_SIZE + 128+64;
+    xOffset = PLANET_SPACE_SIZE + 128 + 64;
 
   if (yOffset > PLANET_SPACE_SIZE + 128)
     yOffset = -PLANET_SPACE_SIZE - 128;

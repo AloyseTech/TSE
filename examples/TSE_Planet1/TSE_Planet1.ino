@@ -1,163 +1,209 @@
-#include <Oleduino.h>
-#include <SD.h>
-#include <Wire.h>
-#include <SPI.h>
-#include <TSE.h>
-#include "characters.h"
-#include "tiles.h"
-#include "teva_sprites.h"
-#include "enemy.h"
-#include "planet1_map.h"
-
-//#define SHOW_FPS
+//if takeCapture is true, frames are being saved on the SD card as BMP files
 bool takeCapture = 0;
+
+//uncomment this line to show the FPS
+#define SHOW_FPS
+
+#include <SdFat.h>
+SdFat SD;
+
+#include <Oleduino.h>
+#include <TSE.h>
+
+// This program-specifics includes files
+#include "hero_sprites.h"
+#include "items_sprites.h"
+#include "enemy.h"
+#include "tiles_map_prologue.h"
+#include "map_prologue.h"
+#include "hero.h"
+#include "npc.h"
+
+//free moving windows around the main character
+//(0 => camera always moves, X=>camera is updated when character is at X pixel of the border only)
+#define CH_WINDOW_WIDTH 32
+#define CH_WINDOW_HEIGHT 32
+
+#define SELECTED_MAP prologueMap    //myMap //
 
 #ifdef SHOW_FPS
 TSE_TextBox tb_fps;
 char fps_str[4] = {0};
 #endif
 
-uint8_t vore[9000]={0};
-
 TSEngine tse;
 Oleduino c;
 
-TSE_Sprite hero;
+
+Hero hero;
 #define FEET_LEFT   1
 #define FEET_RIGHT  hero.data->width-FEET_LEFT
 #define FEET_TOP    hero.data->height-5
 #define FEET_DOWN   hero.data->height-1
 
 #define NUMBER_OF_BLOBS 24
+int blobs_plan = 0;
 InfightingEnemy blob_en[NUMBER_OF_BLOBS];
 
 #define NUMBER_OF_ROBOTS 12
+int robots_plan = 0;
 ShootingEnemy robots_en[NUMBER_OF_ROBOTS];
 
-ShootingEnemy robot;
 
-TSE_Sprite bonus;
-TSE_Sprite projectile1;
+TSE_Sprite armorBonus; //give armor (battery)
+TSE_Sprite lifeBonus; //give HP
+TSE_Sprite manaBonus; //give XP
+TSE_Sprite heroSword; //manual arm
 
+
+TSE_Sprite npc1;
+TSE_Sprite helpbox;
+
+
+byte ch_anim = 0, ch_dir = 0, bl_anim = 0, rob_dir = 0, rob_anim = 0;
+byte ch_attack = 0;
+int lastRobX;
+int lastRobY;
+uint32_t lastChAnim = 0, lastBlobAnim = 0;
 
 void setup() {
   // put your setup code here, to run once:
 
   // initialize the console hardware
   c.init();
+  //  SD.begin(SD_CS_PIN);
   // initialize the game engine
   tse.begin();
   digitalWrite(13, LOW);
 
 
   // initialize the sprite
-  hero.data = &dm_chside1; //the pixel data matrix
-  hero.xPos = 50;     //x and y position
-  hero.yPos = 16;
+  //hero.data = &s_frontA; //the pixel data matrix
+  hero.data = &s_PNJ1; //the pixel data matrix
+  hero.xPos = 470;     //x and y position
+  hero.yPos = 208;
   hero.visible = true; //set the sprite to visible
-  hero.angle = 0;       //no rotation
-  hero.vFlip = true;   //no vertical flip
-  hero.hFlip = false;   //no horizontal flip
-  hero.size = 128;      //normal size ration
+  ch_dir = 3;
 
-  randomSeed(1);
+  randomSeed(4);
   for (int b = 0; b < NUMBER_OF_BLOBS; b++)
   {
     blob_en[b].data = &blob_anim[b % 4];
-    blob_en[b].setCollisionOffsets(9, 1, 2, 2);
     do
     {
       blob_en[b].xPos = random(31 * 16);
       blob_en[b].yPos = random(63 * 16);
-    } while (myMap.tileCollisionBoundary(&blob_en[b]));
+    } while (SELECTED_MAP.tileCollisionBoundary(&blob_en[b]));
     blob_en[b].visible = true;
+    blob_en[b].setCollisionOffsets(9, 1, 1, 1);
   }
 
   for (int b = 0; b < NUMBER_OF_ROBOTS; b++)
   {
     robots_en[b].data = &perso_animd[b % 4];
-    robots_en[b].setCollisionOffsets(1, 1, 2, 2);
+    robots_en[b].setCollisionOffsets(1, 1, 3, 3); //TBRL
     do
     {
       robots_en[b].xPos = random(31 * 16);
       robots_en[b].yPos = random(63 * 16);
-    } while (myMap.tileCollisionBoundary(&robots_en[b]));
+    } while (SELECTED_MAP.tileCollisionBoundary(&robots_en[b]));
     robots_en[b].visible = true;
   }
-  /*
-    robot.data = &perso_animd[0];
-    robot.xPos = 30;
-    robot.yPos = 30;
-    robot.visible = true;
-  */
 
-  bonus.data = &s_batterie;
-  bonus.xPos = 80;
-  bonus.yPos = 90;
-  bonus.visible = true;
+  armorBonus.data = &s_batterie;
+  armorBonus.xPos = 464;
+  armorBonus.yPos = 1000;
+  armorBonus.visible = true;
 
-  projectile1.data = &s_proj_10px;
-  projectile1.xPos = 8;
-  projectile1.yPos = 48;
-  projectile1.visible = true;
+  lifeBonus.data = &s_heart;
+  lifeBonus.xPos = 23;
+  lifeBonus.yPos = 35;
+  lifeBonus.visible = true;
 
-  myMap.tiledata[10] = &dm_grass;
-  hero.scaledHeight = 16;
-  hero.scaledWidth = 10;
+  npc1.data = &s_PNJ5;
+  npc1.xPos = 126 + 304;
+  npc1.yPos = 950 - 900;
+  npc1.visible = true;
+
+  helpbox.data = &s_HELP;
+  helpbox.xPos = 122 + 304;
+  helpbox.yPos = 940 - 900;
+  helpbox.visible = true;
+
 }
 
 
 
-byte ch_anim = 0, ch_dir = 0, bl_anim = 0, rob_dir = 0, rob_anim = 0;
-int lastRobX;
-int lastRobY;
-uint32_t lastChAnim = 0, lastBlobAnim = 0;
+
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  //  delay(500);
+
+  if (c.C.isPressed() && c.C.justPressed())
+    takeCapture = !takeCapture;
 
   c.joystick.read();
   int joyX = c.joystick.getCenteredX();
   int joyY = c.joystick.getCenteredY();
   if (abs(joyX) > 600 || abs(joyY) > 600)
   {
-    byte movAmnt = (abs(joyX) > 600 && abs(joyY) > 600) ? 1 : tse.frameCounter % 2 ? 2 : 1;
+    byte movAmnt = (abs(joyX) > 600 && abs(joyY) > 600) ? tse.frameCounter % 3 ? 1 : 2 : tse.frameCounter % 2 ? 2 : 2;
 
-    if (joyX > 600 //if joystick is put to the right...
-        && myMap.tileCollision(&hero, FEET_RIGHT + movAmnt, FEET_TOP) != 1 //...and there's no classical collision (tree, wall, etc...) at top of feet
-        && myMap.tileCollision(&hero, FEET_RIGHT + movAmnt, FEET_DOWN) != 1) //...nor at bottom of feet   ("1" is the marker for classic collision (direct top, tolerance on sides and bottom => tree)
+    if (joyX > 600) //if joystick is put to the right...
     {
-      hero.xPos += movAmnt;
+      for (uint8_t t = 0; t < movAmnt; t++)
+      {
+        if ( SELECTED_MAP.tileCollision(&hero, FEET_RIGHT + 1, FEET_TOP) == 0 //...and there's no classical collision (tree, wall, etc...) at top of feet
+             && SELECTED_MAP.tileCollision(&hero, FEET_RIGHT + 1, FEET_DOWN) == 0) //...nor at bottom of feet   ("1" is the marker for classic collision (direct top, tolerance on sides and bottom => tree)
+        {
+          hero.xPos ++;
+        }
+      }
       hero.data = &ch_side[ch_anim];
       hero.vFlip = true;   //no vertical flip
       ch_dir = 1;
     }
-    else if (joyX < -600
-             && myMap.tileCollision(&hero, FEET_LEFT - movAmnt, FEET_TOP) != 1
-             && myMap.tileCollision(&hero, FEET_LEFT - movAmnt, FEET_DOWN) != 1)
+    else if (joyX < -600)
     {
-      hero.xPos -= movAmnt;
+      for (uint8_t t = 0; t < movAmnt; t++)
+      {
+        if ( SELECTED_MAP.tileCollision(&hero, FEET_LEFT - 1, FEET_TOP) == 0
+             && SELECTED_MAP.tileCollision(&hero, FEET_LEFT - 1, FEET_DOWN) == 0)
+        {
+          hero.xPos --;
+        }
+      }
       hero.data = &ch_side[ch_anim];
       hero.vFlip = false;   //no vertical flip
       ch_dir = 2;
     }
-    if (joyY > 600
-        && myMap.tileCollision(&hero, FEET_LEFT, FEET_DOWN + movAmnt) != 1
-        && myMap.tileCollision(&hero, FEET_RIGHT, FEET_DOWN + movAmnt) != 1)
+    if (joyY > 600)
     {
-      hero.yPos += movAmnt;
+      for (uint8_t t = 0; t < movAmnt; t++)
+      {
+        if ( SELECTED_MAP.tileCollision(&hero, FEET_LEFT, FEET_DOWN + 1) == 0
+             && SELECTED_MAP.tileCollision(&hero, FEET_RIGHT, FEET_DOWN + 1) == 0)
+        {
+          hero.yPos ++;
+        }
+      }
       hero.data = &ch_front[ch_anim];
       ch_dir = 3;
     }
-    else if (joyY < -600
-             && myMap.tileCollision(&hero, FEET_LEFT, FEET_TOP - movAmnt) != 1
-             && myMap.tileCollision(&hero, FEET_RIGHT, FEET_TOP - movAmnt) != 1)
+    else if (joyY < -600)
     {
-      hero.yPos -= movAmnt;
+      for (uint8_t t = 0; t < movAmnt; t++)
+      {
+        if ( SELECTED_MAP.tileCollision(&hero, FEET_LEFT, FEET_TOP - 1) == 0
+             && SELECTED_MAP.tileCollision(&hero, FEET_RIGHT, FEET_TOP - 1) == 0)
+        {
+          hero.yPos --;
+        }
+      }
       hero.data = &ch_back[ch_anim];
       ch_dir = 4;
     }
+
+
     if (millis() - lastChAnim > 130)
     {
       lastChAnim = millis();
@@ -165,6 +211,9 @@ void loop() {
       if (ch_anim > 3)
         ch_anim = 0;
     }
+
+    hero.xPos = constrain(hero.xPos, 0, SELECTED_MAP.width * SELECTED_MAP.mode8or16 - hero.data->width);
+    hero.yPos = constrain(hero.yPos, 0, SELECTED_MAP.height * SELECTED_MAP.mode8or16 - hero.data->height);
   }
   else
   {
@@ -186,36 +235,117 @@ void loop() {
         hero.data = &ch_back[0];
         break;
     }
-    ch_dir = 0;
+    //ch_dir = 0;
   }
 
-#define CH_WINDOW_WIDTH 32
-#define CH_WINDOW_HEIGHT 32
 
-  while (hero.xPos + myMap.xOffset > 64 + CH_WINDOW_WIDTH / 2 - hero.data->width && myMap.xOffset > -myMap.width * myMap.mode8or16 + 128)
-    myMap.xOffset -= 1;
-  while (hero.xPos + myMap.xOffset < 64 - CH_WINDOW_WIDTH / 2 &&  myMap.xOffset < 0)
-    myMap.xOffset += 1;
-  while (hero.yPos + myMap.yOffset < 64 - CH_WINDOW_HEIGHT / 2 && myMap.yOffset < 0)
-    myMap.yOffset += 1;
-  while (hero.yPos + myMap.yOffset > 64 + CH_WINDOW_HEIGHT / 2 - hero.data->height && myMap.yOffset > -myMap.height * myMap.mode8or16 + 128)
-    myMap.yOffset -= 1;
+  while (hero.xPos + SELECTED_MAP.xOffset > 64 + CH_WINDOW_WIDTH / 2 - hero.data->width && SELECTED_MAP.xOffset > -SELECTED_MAP.width * SELECTED_MAP.mode8or16 + 128)
+    SELECTED_MAP.xOffset -= 1;
+  while (hero.xPos + SELECTED_MAP.xOffset < 64 - CH_WINDOW_WIDTH / 2 &&  SELECTED_MAP.xOffset < 0)
+    SELECTED_MAP.xOffset += 1;
+  while (hero.yPos + SELECTED_MAP.yOffset < 64 - CH_WINDOW_HEIGHT / 2 && SELECTED_MAP.yOffset < 0)
+    SELECTED_MAP.yOffset += 1;
+  while (hero.yPos + SELECTED_MAP.yOffset > 64 + CH_WINDOW_HEIGHT / 2 - hero.data->height && SELECTED_MAP.yOffset > -SELECTED_MAP.height * SELECTED_MAP.mode8or16 + 128)
+    SELECTED_MAP.yOffset -= 1;
+
+
+  if (c.A.isPressed() && c.A.justPressed() && ch_attack == 0)
+  {
+    ch_attack = 3;
+  }
+
+
+  if (ch_attack > 0)
+  {
+    switch (ch_dir)
+    {
+      case 1:
+        hero.data = &s_sideA; //already flipped in movement management
+        heroSword.vFlip = true;
+        heroSword.data = &swordAnimSide[ch_attack - 1];
+        heroSword.xPos = hero.xPos + 6;
+        heroSword.yPos = hero.yPos;
+        break;
+      case 2:
+        hero.data = &s_sideA; //already not flipped in movement management
+        heroSword.vFlip = false;
+        heroSword.data = &swordAnimSide[ch_attack - 1];
+        heroSword.xPos = hero.xPos - 9;
+        heroSword.yPos = hero.yPos;
+        break;
+      case 3:
+        hero.data = &s_frontA;
+        heroSword.vFlip = false;
+        heroSword.data = &swordAnimFront[ch_attack - 1];
+        heroSword.xPos = hero.xPos - 4;
+        heroSword.yPos = hero.yPos + 6;
+        break;
+      case 4:
+        hero.data = &s_backA;
+        heroSword.vFlip = true;
+        heroSword.data = &swordAnimBack[ch_attack - 1];
+        heroSword.xPos = hero.xPos - 4;
+        heroSword.yPos = hero.yPos - 4;
+        break;
+    }
+
+
+    ch_attack--;
+    heroSword.visible = true;
+
+
+    //check damage
+    for (int b = 0; b < NUMBER_OF_BLOBS; b++)
+    {
+      if (blob_en[b].visible)
+      {
+        if (heroSword.collisionPerfect(blob_en[b]))
+        {
+          blob_en[b].takeDamage(20);
+          blob_en[b].showHP();
+        }
+      }
+    }
+    for (int r = 0; r < NUMBER_OF_ROBOTS; r++)
+    {
+      if (robots_en[r].visible)
+      {
+        if (heroSword.collisionPerfect(robots_en[r]))
+        {
+          robots_en[r].takeDamage(20);
+          robots_en[r].showHP();
+        }
+      }
+    }
+
+
+  }
+  else
+    heroSword.visible = false;
+
+
+
 
 
   //move enemy (blob)
   for (int b = 0; b < NUMBER_OF_BLOBS; b++)
   {
-    if (blob_en[b].squareDistanceTo(&hero) < 10000)
-      blob_en[b].move(&myMap, &hero, tse.frameCounter);
+    if (blob_en[b].visible && blob_en[b].lifeBarTimer + 500 < millis())
+    {
+      if (blob_en[b].squareDistanceTo(&hero) < 10000)
+        blob_en[b].move(&SELECTED_MAP, hero, tse.frameCounter);
+      if (blob_en[b].collisionPerfect(hero))
+      {
+        //hero.HP -= 5;
+        hero.takeDamage(5);
+        hero.showHP();
+      }
+    }
+    blob_en[b].data = &blob_anim[(bl_anim + b) % 4];
   }
   if (millis() - lastBlobAnim > 100)
   {
     lastBlobAnim = millis();
-    for (int b = 0; b < NUMBER_OF_BLOBS; b++)
-    {
-      blob_en[b].data = &blob_anim[(bl_anim + b) % 4];
-    }
-
     bl_anim++;
     if (bl_anim > 3)
       bl_anim = 0;
@@ -223,62 +353,107 @@ void loop() {
 
   for (int r = 0; r < NUMBER_OF_ROBOTS; r++)
   {
-
-    if (robots_en[r].squareDistanceTo(&hero) < 10000 && robots_en[r].squareDistanceTo(&hero) > 100)
+    if (robots_en[r].visible)
     {
-      robots_en[r].lastX = robots_en[r].xPos;
-      robots_en[r].lastY = robots_en[r].yPos;
+      if (robots_en[r].squareDistanceTo(&hero) < 10000 && robots_en[r].squareDistanceTo(&hero) > 196)
+      {
+        robots_en[r].lastX = robots_en[r].xPos;
+        robots_en[r].lastY = robots_en[r].yPos;
 
-      robots_en[r].AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &myMap);
-    }
-    if (robots_en[r].lastX != robots_en[r].xPos || robots_en[r].lastY != robots_en[r].yPos)
-      robots_en[r].data = &perso_animd[(bl_anim + r) % 4];
-    else
-      robots_en[r].data = &perso_animd[0]; //steady
+        robots_en[r].AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &SELECTED_MAP);
+      }
+      if (robots_en[r].lastX != robots_en[r].xPos || robots_en[r].lastY != robots_en[r].yPos)
+        robots_en[r].data = &perso_animd[(bl_anim + r) % 4];
+      else
+        robots_en[r].data = &perso_animd[0]; //steady
 
-    if (robots_en[r].inLineOfSight(&hero, &myMap))
-    {
-      robots_en[r].shoot(&hero);
+      if (robots_en[r].squareDistanceTo(&hero) < 12100)
+        if (robots_en[r].inLineOfSight(&hero, &SELECTED_MAP) && robots_en[r].lifeBarTimer + 500 < millis())
+        {
+          robots_en[r].shoot(&hero);
+        }
+
+      robots_en[r].updateBullets(&SELECTED_MAP);
+      if (robots_en[r].touched(&hero))
+      {
+        //hero.HP -= 20;
+        hero.takeDamage(20);
+        hero.showHP();
+      }
     }
-    robots_en[r].updateBullets(&myMap);
   }
-  /*
-    if (robot.squareDistanceTo(&hero) < 10000 && robot.squareDistanceTo(&hero) > 100)
-    {
-      lastRobX = robot.xPos;
-      lastRobY = robot.yPos;
 
-      robot.AI_moveTo(&hero, tse.frameCounter % 2 ? 1 : 0, tse.frameCounter % 2 ? 1 : 0, &myMap);
+
+
+
+
+  //before rendering, sort sprites
+  InfightingEnemy blob_tmp;
+  for (int i = 0; i < (NUMBER_OF_BLOBS - 1); i++) {
+    for (int o = 0; o < (NUMBER_OF_BLOBS - (i + 1)); o++) {
+      if (blob_en[o].yPos > blob_en[o + 1].yPos) {
+        blob_tmp = blob_en[o];
+        blob_en[o] = blob_en[o + 1];
+        blob_en[o + 1] = blob_tmp;
+      }
     }
-    if (lastRobX != robot.xPos || lastRobY != robot.yPos)
-      robot.data = &perso_animd[bl_anim];
-    else
-      robot.data = &perso_animd[0]; //steady
+  }
 
-
-    if (robot.inLineOfSight(&hero, &myMap))
-    {
-      robot.shoot(&hero);
-      //c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + myMap.yOffset, BLUE);
-      //c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height / 2 + myMap.yOffset, WHITE);
-      //c.display.drawLine(robot.xPos + robot.data->width / 2 + myMap.xOffset, robot.yPos + robot.data->height / 2 + myMap.yOffset, hero.xPos + hero.data->width / 2 + myMap.xOffset, hero.yPos + hero.data->height + myMap.yOffset, RED);
+  ShootingEnemy robot_tmp;
+  for (int i = 0; i < (NUMBER_OF_ROBOTS - 1); i++) {
+    for (int o = 0; o < (NUMBER_OF_ROBOTS - (i + 1)); o++) {
+      if (robots_en[o].yPos > robots_en[o + 1].yPos) {
+        robot_tmp = robots_en[o];
+        robots_en[o] = robots_en[o + 1];
+        robots_en[o + 1] = robot_tmp;
+      }
     }
-    robot.updateBullets(&myMap);
-
-    digitalWrite(13, robot.touched(&hero));
-  */
-  //SerialUSB.println(robot.choosePath(&hero, &myMap));
+  }
 
 
-  //render the sprite with a background color (see transparency)
+  if (armorBonus.visible && armorBonus.collision(hero, 4, 4))
+  {
+    hero.armor = 500;
+    hero.showHP();
+    armorBonus.visible = false;
+  }
+
+  if (lifeBonus.visible && lifeBonus.collision(hero, 1, 2))
+  {
+    hero.HP = 1000;
+    hero.showHP();
+    lifeBonus.visible = false;
+  }
+
+
+
+  //render the sprite with a background color
   TSE_render(0);
+
+
+
+
+
+
+  //now that every enemies has taken action, let's check if we are dead
+  if (hero.HP <= 0)
+  {
+    delay(1000);
+    NVIC_SystemReset();
+  }
 
 #ifdef SHOW_FPS
   fps2char(tse.fps, fps_str);
   tb_fps.set(fps_str, 4, 100, 0, 0, 1, WHITE, ALPHA);
-  vore[random(1000)]++;
 #endif
 }
+
+
+
+
+
+
+
 
 //TODO : move to specific file
 char *fps2char (double val, char *sout) {
