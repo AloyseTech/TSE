@@ -1,3 +1,4 @@
+/*
 const byte BUFFER_SIZE = 32;
 char conf_buffer[BUFFER_SIZE];
 
@@ -108,4 +109,4 @@ void loadGameConfig(String filepath)
 
 }
 
-
+*/

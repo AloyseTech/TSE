@@ -42,6 +42,16 @@ public:
 
 class TSE_Sprite;
 
+
+
+class Point2D
+{
+public:
+    //Variables
+    int x;
+    int y;
+};
+
 class TSE_TileMap
 {
 public:
@@ -65,9 +75,13 @@ public:
     uint8_t tileCollision(TSE_Sprite *s, uint8_t type);
     uint8_t tileCollisionBoundary(TSE_Sprite *s);
     uint8_t tileCollisionBoundary(TSE_Sprite *s,int xOff, int yOff);
+    bool tileCollision(int x, int y, int w, int h);
 
     
     bool inLineOfSight(int x0,int y0, int x1, int y1);
+    bool inLineOfSight(int x0,int y0, int x1, int y1, uint8_t div);
+    Point2D inLineOfSightP2D(int x0,int y0, int x1, int y1, uint8_t div);
+
 };
 
 class TSE_Sprite
@@ -148,6 +162,7 @@ public:
     void endTransfer();
     
 #ifdef SCREEN_CAPTURE
+    bool takeCapture=0;
     //for 128x128 16bit picture
     const char bmp_header[54] =
     {

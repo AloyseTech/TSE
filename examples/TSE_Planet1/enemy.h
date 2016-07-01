@@ -49,7 +49,7 @@ class ShootingEnemy : public TSE_Sprite
     void draw(TSE_TileMap *map, uint16_t *buffer, uint16_t lines)
     {
       TSE_Sprite::draw(map, buffer, lines);
-      if ( lifeBarTimer + (takeCapture?3000:1000) > millis())
+      if ( lifeBarTimer + 1000 > millis())
       {
         drawHP(map, buffer, lines);
       }
@@ -159,18 +159,34 @@ void ShootingEnemy::drawHP(TSE_TileMap *map, uint16_t *buffer, uint16_t lines)
 
 
 
+
+
+
+
+
+
+
 class InfightingEnemy : public TSE_Sprite
 {
   public :
     void attack(TSE_Sprite target);
     void move(TSE_TileMap * map, TSE_Sprite spr, int f);
+
+    //improved AI [WIP]
+    void AI_calculateMovement(TSE_TileMap * map, TSE_Sprite *target, uint32_t f);
+    int xDest = 0, yDest = 0;
+    int Xvect = 0, Yvect = 0;
+    int xPosX8 = 0, yPosX8 = 0;
+
+
+
     TSE_Sprite projectiles[MAX_ENEMY_PROJECTILES];
 
 
     void draw(TSE_TileMap *map, uint16_t *buffer, uint16_t lines)
     {
       TSE_Sprite::draw(map, buffer, lines);
-      if ( lifeBarTimer + (takeCapture?3000:1000) > millis())
+      if ( lifeBarTimer + 1000 > millis())
       {
         drawHP(map, buffer, lines);
       }
@@ -300,5 +316,45 @@ void InfightingEnemy::drawHP(TSE_TileMap *map, uint16_t *buffer, uint16_t lines)
       }
     }
   }
+}
+
+void InfightingEnemy::AI_calculateMovement(TSE_TileMap * m_map, TSE_Sprite *target, uint32_t f)
+{
+  //1. define wanted movement vector (pointing to wanted destination)
+  int dX = xPos - target->xPos;
+  int dY = yPos - target->yPos;
+
+  Xvect = map(dX, -128, 128, -32, 32);
+  Yvect = map(dY, -128, 128, -32, 32);
+
+
+  //2a. if there is an obstacle, reflect the vector on it (like bounce) : it sets the real destination (avoiding the obstacle)
+  Point2D obstaclePoint = m_map->inLineOfSightP2D(xPos, yPos, xPos + Xvect, yPos + Yvect, 3);
+  if (obstaclePoint.x != 0xFFFF && obstaclePoint.y != -0xFFFF) //there is a collision
+  {
+    //3. We know there will be a collision, but in which direction should we bounce? RAYCASTING !!!!
+
+
+  }
+  //2b. if there is no obstacle, move normally
+  else
+  {
+    Xvect >>= 2;
+    Yvect >>= 2;
+    xPosX8 += Xvect;
+    yPosX8 += Yvect;
+
+    //check collision, just in case, but we have line of sight so...
+    if (m_map->tileCollision(xPosX8 >> 3, yPosX8 >> 3, data->width, data->height))
+      return;
+
+    xPos = xPosX8 >> 3;
+    yPos = yPosX8 >> 3;
+    return;
+  }
+
+
+
+
 }
 

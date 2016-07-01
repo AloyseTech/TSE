@@ -1,12 +1,5 @@
-//if takeCapture is true, frames are being saved on the SD card as BMP files
-bool takeCapture = 0;
-
-//uncomment this line to show the FPS
-#define SHOW_FPS
-
 #include <SdFat.h>
 SdFat SD;
-
 #include <Oleduino.h>
 #include <TSE.h>
 
@@ -18,6 +11,12 @@ SdFat SD;
 #include "map_prologue.h"
 #include "hero.h"
 #include "npc.h"
+#include "popup.h"
+Popup pp;
+
+
+//uncomment this line to show the FPS
+#define SHOW_FPS
 
 //free moving windows around the main character
 //(0 => camera always moves, X=>camera is updated when character is at X pixel of the border only)
@@ -79,7 +78,7 @@ void setup() {
 
   // initialize the sprite
   //hero.data = &s_frontA; //the pixel data matrix
-  hero.data = &s_PNJ1; //the pixel data matrix
+  hero.data = &ch_front[2]; //the pixel data matrix
   hero.xPos = 470;     //x and y position
   hero.yPos = 208;
   hero.visible = true; //set the sprite to visible
@@ -120,7 +119,7 @@ void setup() {
   lifeBonus.yPos = 35;
   lifeBonus.visible = true;
 
-  npc1.data = &s_PNJ5;
+  npc1.data = &s_PNJ5[0];
   npc1.xPos = 126 + 304;
   npc1.yPos = 950 - 900;
   npc1.visible = true;
@@ -130,6 +129,53 @@ void setup() {
   helpbox.yPos = 940 - 900;
   helpbox.visible = true;
 
+
+
+  if (!c.B.isPressed())
+  {
+    pp.set(
+      "Hi, adventurer !  "
+    );
+    TSE_render(0);
+    delay(300);
+    pp.set(
+      "Hi, adventurer ! "
+      "Are you ready to "
+    );
+    TSE_render(0);
+    delay(100);
+    pp.set(
+      "Hi, adventurer ! "
+      "Are you ready to "
+      "affront the toxic"
+    );
+    TSE_render(0);
+    delay(100);
+    pp.set(
+      "Hi, adventurer ! "
+      "Are you ready to "
+      "affront the toxic"
+      "creatures ?      "
+    );
+    TSE_render(0);
+    delay(200);
+
+    while (!setCameraTarget(300, 400, 16))
+      TSE_render(0);
+    while (!setCameraTarget(64, 800, 16))
+      TSE_render(0);
+    while (!setCameraTarget(448, 900, 16))
+      TSE_render(0);
+
+    while (!c.B.isPressed())
+    {
+      //moveFocusOn(300, 400);
+      setCameraTarget(hero.xPos, hero.yPos, 16);
+      TSE_render(0);
+      delay(10);
+    }
+    pp.clear();
+  }
 }
 
 
@@ -139,7 +185,7 @@ void setup() {
 void loop() {
 
   if (c.C.isPressed() && c.C.justPressed())
-    takeCapture = !takeCapture;
+    tse.takeCapture = !tse.takeCapture;
 
   c.joystick.read();
   int joyX = c.joystick.getCenteredX();
@@ -384,6 +430,8 @@ void loop() {
   }
 
 
+  //update npc
+  npc1.data = &s_PNJ5[(tse.frameCounter >> 2) % 2 ? 0 : 1];
 
 
 
@@ -450,6 +498,55 @@ void loop() {
 
 
 
+bool moveFocusOn(int x, int y)
+{
+  bool r = 1;
+  if (x + SELECTED_MAP.xOffset > 64 && SELECTED_MAP.xOffset > -SELECTED_MAP.width * SELECTED_MAP.mode8or16 + 128)
+  {
+    SELECTED_MAP.xOffset -= (y + SELECTED_MAP.xOffset - 64) / 2;
+    r = 0;
+  }
+  else if (x + SELECTED_MAP.xOffset < 64  &&  SELECTED_MAP.xOffset < 0)
+  {
+    SELECTED_MAP.xOffset += (y + SELECTED_MAP.xOffset - 64) / 2;
+    r = 0;
+  }
+  if (y + SELECTED_MAP.yOffset < 64  && SELECTED_MAP.yOffset < 0)
+  {
+    SELECTED_MAP.yOffset += (y + SELECTED_MAP.yOffset - 64) / 2;
+    r = 0;
+  }
+  else if (y + SELECTED_MAP.yOffset > 64  && SELECTED_MAP.yOffset > -SELECTED_MAP.height * SELECTED_MAP.mode8or16 + 128)
+  {
+    SELECTED_MAP.yOffset -= (y + SELECTED_MAP.yOffset - 64) / 2;
+    r = 0;
+  }
+}
+
+bool setCameraTarget(int x, int y, int speed)
+{
+  int deltaX = x + SELECTED_MAP.xOffset;
+  int deltaY = y + SELECTED_MAP.yOffset;
+  const int targetScreenX = 64;
+  const int targetScreenY = 64;
+  bool done = false;
+
+  SELECTED_MAP.xOffset += (targetScreenX - deltaX) / speed;
+  SELECTED_MAP.yOffset += (targetScreenY - deltaY) / speed;
+
+  if ((targetScreenX - deltaX) / speed == 0 && (targetScreenY - deltaY) / speed == 0)
+    done = true;
+
+  SELECTED_MAP.xOffset = constrain(SELECTED_MAP.xOffset, - SELECTED_MAP.width * SELECTED_MAP.mode8or16 + 128, 0);
+  SELECTED_MAP.yOffset = constrain(SELECTED_MAP.yOffset, - SELECTED_MAP.height * SELECTED_MAP.mode8or16 + 128, 0);
+
+  return done;
+  /*
+    SELECTED_MAP.xOffset = constrain(SELECTED_MAP.xOffset, -96, 0);
+    SELECTED_MAP.yOffset = constrain(SELECTED_MAP.yOffset, -144, -24);
+  */
+
+}
 
 
 

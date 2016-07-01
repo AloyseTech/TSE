@@ -11,7 +11,7 @@ class Hero : public TSE_Sprite
     void draw(TSE_TileMap *map, uint16_t *buffer, uint16_t lines)
     {
       TSE_Sprite::draw(map, buffer, lines);
-      if ( lifeBarTimer + (takeCapture?4000:2500) > millis())
+      if ( lifeBarTimer + 2500 > millis())
       {
         drawHP(map, buffer, lines);
       }

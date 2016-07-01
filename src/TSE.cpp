@@ -196,6 +196,7 @@ void TSEngine::initCapture()
 
 void TSEngine::processCapture(uint16_t *lineBuffer)
 {
+    //dma.disable();
     for (int i = 0, k = 0; k < 128; i += 2, k++) {
         uint16_t sdcolor = lineBuffer[k];
         byte VH = (sdcolor & 0xFF00) >> 8; //Mask the High Byte
@@ -220,6 +221,13 @@ void TSEngine::endCapture()
 #endif
 
 void TSEngine::initTransfer() {
+    while(!dma.done());
+    dma.disable();
+    
+#ifdef SCREEN_CAPTURE
+    if(takeCapture)
+        initCapture();
+#endif
     
     //digitalWrite(DISPLAY_CS_PIN, LOW); // Tell display to pay attention to the incoming data.
     PORT->Group[g_APinDescription[DISPLAY_CS_PIN].ulPort].OUTCLR.reg = (1ul << g_APinDescription[DISPLAY_CS_PIN].ulPin) ;
@@ -247,18 +255,37 @@ void TSEngine::initTransfer() {
     
 }
 
+
 void TSEngine::transfer(uint16_t buf[TSE_VIDEO_BUFFER_LENGTH]) {
+    while(!dma.done());
+    dma.disable();
+    
+#ifdef SCREEN_CAPTURE
+    if(takeCapture)
+        processCapture(buf);
+#endif
+    
     for (int i = 0, k = 0; i < 2 * TSE_VIDEO_BUFFER_LENGTH; i += 2, k++) {
         dma_buffer[i] = buf[k] >> 8;
         dma_buffer[i + 1] = buf[k];
     }
     dma.spi_write(dma_buffer, 2 * TSE_VIDEO_BUFFER_LENGTH);
+    //SPI.transfer(dma_buffer, 2 * TSE_VIDEO_BUFFER_LENGTH);
 }
 
 void TSEngine::endTransfer() {
+    while(!dma.done());
+    dma.disable();
+    
+    
     SPI.endTransaction();
     //digitalWrite(DISPLAY_CS_PIN, HIGH);
     PORT->Group[g_APinDescription[DISPLAY_CS_PIN].ulPort].OUTSET.reg = (1ul << g_APinDescription[DISPLAY_CS_PIN].ulPin) ;
+    
+#ifdef SCREEN_CAPTURE
+    if(takeCapture)
+        endCapture();
+#endif
     
     frameCounter++;
     if (frameCounter%10==0)
@@ -831,6 +858,15 @@ uint8_t TSE_TileMap::tileCollision(TSE_Sprite *s, int xOff, int yOff)
     return collisionMask[(s->xPos + xOff) / mode8or16 % height + (s->yPos + yOff) / mode8or16 * width];
 }
 
+bool TSE_TileMap::tileCollision(int x, int y, int w, int h)
+{
+    uint8_t tl = collisionMask[(x) / mode8or16 % height + (y) / mode8or16 * width];
+    uint8_t tr = collisionMask[(x+w) / mode8or16 % height + (y) / mode8or16 * width];
+    uint8_t bl = collisionMask[(x) / mode8or16 % height + (y+h) / mode8or16 * width];
+    uint8_t br = collisionMask[(x+w) / mode8or16 % height + (y+h) / mode8or16 * width];
+    return (tl||tr||bl||br);
+}
+
 uint8_t TSE_TileMap::tileCollisionBoundary(TSE_Sprite *s)
 {
     if(collisionMask[(s->xPos + s->colLeftOffset) / mode8or16 % height + (s->yPos + s->colTopOffset) / mode8or16 * width]        //TOP LEFT CORNER
@@ -851,11 +887,74 @@ uint8_t TSE_TileMap::tileCollisionBoundary(TSE_Sprite *s, int xof, int yof)
     return 0;
 }
 
-
-bool TSE_TileMap::inLineOfSight(int x0,int y0,int x1,int y1)
+Point2D TSE_TileMap::inLineOfSightP2D(int x0,int y0,int x1,int y1,uint8_t divisor)
 {
-    const uint8_t divisor = 2;
+    Point2D p;
+    p.x=0xFFFF;
+    p.y=-0xFFFF;
+
+    x0/=mode8or16>>divisor;  // divide by 2 to split tile in 4 subtile
+    y0/=mode8or16>>divisor;
     
+    x1/=mode8or16>>divisor;
+    y1/=mode8or16>>divisor;
+    
+    
+    int16_t steep = abs(y1 - y0) > abs(x1 - x0);
+    
+    if (steep) {
+        swap(x0, y0);
+        swap(x1, y1);
+    }
+    
+    if (x0 > x1) {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+    
+    int16_t dx, dy;
+    dx = x1 - x0;
+    dy = abs(y1 - y0);
+    
+    int16_t err = dx / 2;
+    int16_t ystep;
+    
+    if (y0 < y1) {
+        ystep = 1;
+    } else {
+        ystep = -1;
+    }
+    
+    for (; x0 <= x1; x0++) {
+        if (steep) {
+            //drawPixel(y0, x0, color);
+            if (collisionMask[(y0>>divisor) + (x0>>divisor)* width])
+            {
+                p.x=y0*mode8or16>>divisor;
+                p.y=x0*mode8or16>>divisor;
+                return p;
+            }
+        } else {
+            //drawPixel(x0, y0, color);
+            if (collisionMask[(x0>>divisor) + (y0>>divisor)* width])
+            {
+                p.x=x0*mode8or16>>divisor;
+                p.y=y0*mode8or16>>divisor;
+                return p;
+            }
+        }
+        err -= dy;
+        if (err < 0) {
+            y0 += ystep;
+            err += dx;
+        }
+    }
+    
+    return p;
+}
+
+bool TSE_TileMap::inLineOfSight(int x0,int y0,int x1,int y1,uint8_t divisor)
+{
     x0/=mode8or16>>divisor;  // divide by 2 to split tile in 4 subtile
     y0/=mode8or16>>divisor;
     
@@ -911,4 +1010,10 @@ bool TSE_TileMap::inLineOfSight(int x0,int y0,int x1,int y1)
     
     return true;
 
+}
+
+bool TSE_TileMap::inLineOfSight(int x0,int y0,int x1,int y1)
+{
+    return inLineOfSight(x0,y0,x1,y1,2);
+    
 }
